@@ -1326,35 +1326,81 @@ function fitTreeAfterLayout() {
 function onZoom(event) {
   event.preventDefault();
   const direction = event.deltaY > 0 ? -0.08 : 0.08;
-  const nextScale = Math.min(1.8, Math.max(0.34, state.scale + direction));
-  if (nextScale === state.scale) return;
-
-  // Anchor the zoom to the cursor so the point under it stays put.
   const rect = els.viewport.getBoundingClientRect();
-  const pointerX = event.clientX - rect.left;
-  const pointerY = event.clientY - rect.top;
-  const ratio = nextScale / state.scale;
+  zoomAt(event.clientX - rect.left, event.clientY - rect.top, state.scale + direction);
+}
+
+// Anchor the zoom so the point under the cursor/fingers stays put.
+function zoomAt(pointerX, pointerY, nextScale) {
+  const clamped = Math.min(1.8, Math.max(0.34, nextScale));
+  if (clamped === state.scale) return;
+  const ratio = clamped / state.scale;
   state.offsetX = pointerX - (pointerX - state.offsetX) * ratio;
   state.offsetY = pointerY - (pointerY - state.offsetY) * ratio;
-  state.scale = nextScale;
+  state.scale = clamped;
   renderTree();
 }
 
 function enableDrag() {
+  const pointers = new Map();
   let start = null;
+  let pinch = null;
+
+  const viewportPoint = (event) => {
+    const rect = els.viewport.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
+
+  const beginGesture = () => {
+    const points = [...pointers.values()];
+    if (points.length >= 2) {
+      start = null;
+      pinch = {
+        distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y),
+        scale: state.scale,
+      };
+    } else if (points.length === 1) {
+      pinch = null;
+      start = { x: points[0].x, y: points[0].y, ox: state.offsetX, oy: state.offsetY };
+    } else {
+      pinch = null;
+      start = null;
+    }
+  };
+
   els.viewport.addEventListener("pointerdown", (event) => {
-    start = { x: event.clientX, y: event.clientY, ox: state.offsetX, oy: state.offsetY };
+    pointers.set(event.pointerId, viewportPoint(event));
     els.viewport.setPointerCapture(event.pointerId);
+    beginGesture();
   });
+
   els.viewport.addEventListener("pointermove", (event) => {
-    if (!start) return;
-    state.offsetX = start.ox + event.clientX - start.x;
-    state.offsetY = start.oy + event.clientY - start.y;
-    renderTree();
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, viewportPoint(event));
+    const points = [...pointers.values()];
+
+    if (pinch && points.length >= 2) {
+      const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      if (!pinch.distance || !distance) return;
+      const midX = (points[0].x + points[1].x) / 2;
+      const midY = (points[0].y + points[1].y) / 2;
+      zoomAt(midX, midY, pinch.scale * (distance / pinch.distance));
+      return;
+    }
+
+    if (start) {
+      state.offsetX = start.ox + points[0].x - start.x;
+      state.offsetY = start.oy + points[0].y - start.y;
+      renderTree();
+    }
   });
-  els.viewport.addEventListener("pointerup", () => {
-    start = null;
-  });
+
+  const endPointer = (event) => {
+    if (!pointers.delete(event.pointerId)) return;
+    beginGesture();
+  };
+  els.viewport.addEventListener("pointerup", endPointer);
+  els.viewport.addEventListener("pointercancel", endPointer);
 }
 
 function exportData() {
