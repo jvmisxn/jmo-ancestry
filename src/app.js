@@ -486,27 +486,18 @@ function renderTree() {
     const visibleParentIds = parentIds.filter((id) => nodes.some((candidate) => candidate.person.id === id));
     const hiddenParents = parentIds.length - visibleParentIds.length;
     if (state.collapseCollateral && hiddenParents > 0) {
-      const expand = svgEl("g", {
-        class: "ancestor-expander",
-        transform: `translate(${node.x} ${node.y - NODE_HALF_HEIGHT - 28})`,
-        tabindex: "0",
-        role: "button",
-        "aria-label": `Show parents of ${node.person.name}`,
-      });
-      expand.append(svgEl("rect", { x: -58, y: -14, width: 116, height: 26, rx: 13 }));
-      expand.append(svgText(`Show parent${hiddenParents === 1 ? "" : "s"}`, 0, 4, "ancestor-expander-text"));
-      expand.addEventListener("pointerdown", (event) => event.stopPropagation());
-      expand.addEventListener("click", (event) => {
-        event.stopPropagation();
-        expandParents(node.person.id);
-      });
-      expand.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          expandParents(node.person.id);
-        }
-      });
-      g.append(expand);
+      g.append(ancestorToggle(node, {
+        label: `Show parent${hiddenParents === 1 ? "" : "s"}`,
+        ariaLabel: `Show parents of ${node.person.name}`,
+        onToggle: () => expandParents(node.person.id),
+      }));
+    } else if (state.collapseCollateral && visibleParentIds.length > 0 && state.expandedAncestors.has(node.person.id)) {
+      g.append(ancestorToggle(node, {
+        label: `Hide parent${visibleParentIds.length === 1 ? "" : "s"}`,
+        ariaLabel: `Hide parents of ${node.person.name}`,
+        collapse: true,
+        onToggle: () => collapseParents(node.person.id),
+      }));
     }
 
     const group = svgEl("g", {
@@ -539,6 +530,30 @@ function renderTree() {
     group.append(svgText(formatYears(node.person), NODE.textX, 16, "node-years"));
     g.append(group);
   }
+}
+
+function ancestorToggle(node, { label, ariaLabel, onToggle, collapse = false }) {
+  const toggle = svgEl("g", {
+    class: `ancestor-expander ${collapse ? "collapse" : ""}`,
+    transform: `translate(${node.x} ${node.y - NODE_HALF_HEIGHT - 28})`,
+    tabindex: "0",
+    role: "button",
+    "aria-label": ariaLabel,
+  });
+  toggle.append(svgEl("rect", { x: -58, y: -14, width: 116, height: 26, rx: 13 }));
+  toggle.append(svgText(label, 0, 4, "ancestor-expander-text"));
+  toggle.addEventListener("pointerdown", (event) => event.stopPropagation());
+  toggle.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onToggle();
+  });
+  toggle.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onToggle();
+    }
+  });
+  return toggle;
 }
 
 function renderTreePortrait(group, person) {
@@ -626,6 +641,13 @@ function hiddenExpandableParentCount(nodes, index) {
 
 function expandParents(personId) {
   state.expandedAncestors.add(personId);
+  fitTree();
+  render();
+}
+
+function collapseParents(personId) {
+  // Deeper expansions are kept so re-expanding restores the branch as it was.
+  state.expandedAncestors.delete(personId);
   fitTree();
   render();
 }

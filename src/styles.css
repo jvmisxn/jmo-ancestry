@@ -578,6 +578,21 @@ dd {
   pointer-events: none;
 }
 
+.ancestor-expander.collapse rect {
+  fill: #fbf7f1;
+  stroke: rgba(122, 91, 58, 0.44);
+}
+
+.ancestor-expander.collapse:hover rect,
+.ancestor-expander.collapse:focus rect {
+  fill: #f3ece1;
+  stroke: #8a6238;
+}
+
+.ancestor-expander.collapse .ancestor-expander-text {
+  fill: #8a6238;
+}
+
 .tree-node.dimmed {
   opacity: 0.42;
 }
