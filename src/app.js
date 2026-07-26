@@ -1296,8 +1296,32 @@ function selectPerson(id, reroot = true, openProfile = true) {
     state.rootId = id;
     resetExpandedAncestors();
     fitTree();
+  } else {
+    ensurePersonVisible(id);
   }
   render();
+}
+
+// Pan the current view to a person selected from the list or profile links,
+// but only when their node sits outside the visible viewport.
+function ensurePersonVisible(id) {
+  const index = relationshipIndex();
+  const root = personById(state.rootId);
+  if (!root) return;
+  const visibleIds = state.collapseCollateral ? expandedTreeIds(root.id, index) : null;
+  const nodes = layoutNodes(buildBranch(root.id, index, visibleIds), index);
+  const node = nodes.find((candidate) => candidate.person.id === id);
+  if (!node) return;
+  const width = Math.max(els.viewport.clientWidth, 360);
+  const height = Math.max(els.viewport.clientHeight, 520);
+  const screenX = node.x * state.scale + state.offsetX;
+  const screenY = node.y * state.scale + state.offsetY;
+  const margin = 48;
+  const inView = screenX > margin && screenX < width - margin
+    && screenY > margin && screenY < height - margin;
+  if (inView) return;
+  state.offsetX = width / 2 - node.x * state.scale;
+  state.offsetY = height / 2 - node.y * state.scale;
 }
 
 function fitTree() {
