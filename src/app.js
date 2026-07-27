@@ -768,38 +768,78 @@ function applyProgressiveAncestorLanes(nodes, index) {
 
   const rootParents = orderedParentIds(state.rootId, index);
   const minGap = NODE.width + 22;
-  const centerGap = NODE_HALF_WIDTH + 112;
 
   for (const rowNodes of rows.values()) {
     for (const node of rowNodes) {
       const path = ancestorPathFromRoot(state.rootId, node.person.id, index);
       if (!path.length) continue;
       node.ancestorPath = path;
-      node.x = rootNode.x + ancestorPathOffset(path, rootParents.length);
+      node.ancestorSlot = ancestorPathSlot(path, rootParents.length);
+      node.x = rootNode.x + node.ancestorSlot * minGap;
     }
   }
 
   for (const rowNodes of rows.values()) {
-    const left = rowNodes
-      .filter((node) => ancestorLaneDirection(node.ancestorPath, rootParents.length) < 0)
-      .sort((a, b) => b.x - a.x);
-    const right = rowNodes
-      .filter((node) => ancestorLaneDirection(node.ancestorPath, rootParents.length) > 0)
-      .sort((a, b) => a.x - b.x);
-    const middle = rowNodes
-      .filter((node) => ancestorLaneDirection(node.ancestorPath, rootParents.length) === 0)
-      .sort((a, b) => a.x - b.x);
+    placePathlessAncestorSpouses(rowNodes, rootNode, index, minGap);
+  }
+}
 
-    pushBranchAwayFromCenter(left, rootNode.x - centerGap, -1, minGap);
-    pushBranchAwayFromCenter(right, rootNode.x + centerGap, 1, minGap);
+function placePathlessAncestorSpouses(rowNodes, rootNode, index, minGap) {
+  const rowNodeById = new Map(rowNodes.map((node) => [node.person.id, node]));
+  const pathlessSpousesByAnchor = new Map();
 
-    for (let index = 1; index < middle.length; index += 1) {
-      const previous = middle[index - 1];
-      const current = middle[index];
-      const overlap = previous.x + minGap - current.x;
-      if (overlap > 0) current.x += overlap;
+  for (const node of rowNodes) {
+    if (node.ancestorPath?.length) continue;
+
+    const anchor = [...(index.get(node.person.id)?.spouses || [])]
+      .map((spouseId) => rowNodeById.get(spouseId))
+      .find((spouseNode) => spouseNode?.ancestorPath?.length);
+    if (!anchor) continue;
+
+    if (!pathlessSpousesByAnchor.has(anchor.person.id)) pathlessSpousesByAnchor.set(anchor.person.id, []);
+    pathlessSpousesByAnchor.get(anchor.person.id).push(node);
+  }
+
+  for (const [anchorId, spouseNodes] of pathlessSpousesByAnchor.entries()) {
+    const anchor = rowNodeById.get(anchorId);
+    const cluster = [anchor, ...spouseNodes];
+    const hasCollision = cluster.some((node, nodeIndex) =>
+      cluster.some((candidate, candidateIndex) =>
+        candidateIndex > nodeIndex && Math.abs(candidate.x - node.x) < minGap,
+      ),
+    );
+    if (!hasCollision) continue;
+
+    const averageX = spouseNodes.reduce((total, node) => total + node.x, 0) / spouseNodes.length;
+    const fallbackDirection = Math.sign(anchor.x - rootNode.x)
+      || ancestorLaneDirection(anchor.ancestorPath, orderedParentIds(state.rootId, index).length)
+      || -1;
+    const preferredSide = Math.sign(averageX - anchor.x) || fallbackDirection;
+    const sortedSpouses = [...spouseNodes].sort((a, b) => a.x - b.x || a.person.name.localeCompare(b.person.name));
+    const pending = new Set(sortedSpouses);
+    const occupied = rowNodes.filter((node) => !pending.has(node));
+
+    sortedSpouses.forEach((node) => {
+      node.x = nearestOpenSpouseSlot(anchor.x, node.x, preferredSide, occupied, minGap, sortedSpouses.length + rowNodes.length);
+      occupied.push(node);
+    });
+  }
+}
+
+function nearestOpenSpouseSlot(anchorX, originalX, preferredSide, occupied, minGap, maxSlots) {
+  const originalSide = Math.sign(originalX - anchorX);
+  const firstSide = originalSide || preferredSide || -1;
+  const sideOrder = [firstSide, -firstSide];
+
+  for (let slot = 1; slot <= maxSlots; slot += 1) {
+    for (const side of sideOrder) {
+      const x = anchorX + side * minGap * slot;
+      const overlaps = occupied.some((node) => Math.abs(node.x - x) < minGap);
+      if (!overlaps) return x;
     }
   }
+
+  return anchorX + firstSide * minGap * (maxSlots + 1);
 }
 
 function ancestorPathFromRoot(rootId, targetId, index) {
@@ -821,39 +861,21 @@ function ancestorPathFromRoot(rootId, targetId, index) {
   return [];
 }
 
-function ancestorPathOffset(path, rootParentCount) {
+function ancestorPathSlot(path, rootParentCount) {
   const direction = ancestorLaneDirection(path, rootParentCount);
   if (!direction) return 0;
 
-  const sideStep = 188;
-  const generationStep = 122;
-  const branchStep = 58;
-  let offset = direction * (sideStep + Math.max(0, path.length - 1) * generationStep);
-
+  let slot = 1;
   for (let index = 1; index < path.length; index += 1) {
-    const parentDirection = parentLaneDirection(path[index], 2);
-    offset += parentDirection * (branchStep / index);
+    slot = slot * 2 + (path[index] === 0 ? 0 : 1);
   }
 
-  return offset;
+  return direction < 0 ? -slot : slot;
 }
 
 function ancestorLaneDirection(path, rootParentCount) {
   if (!path?.length) return 0;
   return parentLaneDirection(path[0], rootParentCount);
-}
-
-function pushBranchAwayFromCenter(nodes, centerLimit, direction, minGap) {
-  nodes.forEach((node, index) => {
-    if (index === 0) {
-      node.x = direction < 0 ? Math.min(node.x, centerLimit) : Math.max(node.x, centerLimit);
-      return;
-    }
-
-    const previous = nodes[index - 1];
-    const nextLimit = previous.x + direction * minGap;
-    node.x = direction < 0 ? Math.min(node.x, nextLimit) : Math.max(node.x, nextLimit);
-  });
 }
 
 function orderedParentIds(childId, index) {
@@ -901,7 +923,7 @@ function layoutFamilyUnits(nodes, index, directIds) {
 }
 
 function siblingParentIds(personId, index) {
-  return [...(index.get(personId)?.parents || [])];
+  return orderedParentIds(personId, index);
 }
 
 function familyUnitLabel(key, groupNodes, index) {
@@ -930,7 +952,7 @@ function familyGroups(rowPeople, index, directOrder) {
   const groupMap = new Map();
 
   for (const person of rowPeople) {
-    const parents = [...(index.get(person.id)?.parents || [])];
+    const parents = orderedParentIds(person.id, index);
     const key = parents.length ? `parents:${parents.join("+")}` : familyFallbackKey(person, rowPeople, index);
     if (!groupMap.has(key)) groupMap.set(key, { key, people: [], parents });
     groupMap.get(key).people.push(person);
@@ -965,7 +987,7 @@ function ancestorBranchDrift(rootId, group, generation, index) {
   const side = ancestorSideForGroup(rootId, group, index);
   if (side === null) return 0;
 
-  const rootParents = [...(index.get(rootId)?.parents || [])];
+  const rootParents = orderedParentIds(rootId, index);
   const middle = (rootParents.length - 1) / 2;
   const direction = Math.sign(side - middle);
   if (!direction) return 0;
@@ -976,7 +998,7 @@ function ancestorBranchDrift(rootId, group, generation, index) {
 }
 
 function ancestorSideForGroup(rootId, group, index) {
-  const rootParents = [...(index.get(rootId)?.parents || [])];
+  const rootParents = orderedParentIds(rootId, index);
   if (rootParents.length < 2) return null;
   const candidates = [...group.parents, ...group.people.map((person) => person.id)];
   const sides = candidates
@@ -1100,7 +1122,7 @@ function directAncestorOrder(rootId, index) {
   while (current.length) {
     const parents = [];
     for (const id of current) {
-      for (const parentId of index.get(id)?.parents || []) {
+      for (const parentId of orderedParentIds(id, index)) {
         if (!seen.has(parentId)) {
           seen.add(parentId);
           parents.push(parentId);
