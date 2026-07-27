@@ -865,12 +865,16 @@ function ancestorPathSlot(path, rootParentCount) {
   const direction = ancestorLaneDirection(path, rootParentCount);
   if (!direction) return 0;
 
-  let slot = 1;
+  let rest = 0;
   for (let index = 1; index < path.length; index += 1) {
-    slot = slot * 2 + (path[index] === 0 ? 0 : 1);
+    rest = rest * 2 + (path[index] === 0 ? 0 : 1);
   }
 
-  return direction < 0 ? -slot : slot;
+  if (direction < 0) {
+    return -(2 ** Math.max(0, path.length - 1) - rest);
+  }
+
+  return rest + 1;
 }
 
 function ancestorLaneDirection(path, rootParentCount) {
