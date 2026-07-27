@@ -615,17 +615,23 @@ function expandedTreeIds(rootId, index) {
     for (const childSpouseId of index.get(childId)?.spouses || []) visible.add(childSpouseId);
   }
 
-  const queue = [rootId, ...state.expandedAncestors].filter((id) => visible.has(id));
-  const seen = new Set();
-  while (queue.length) {
-    const id = queue.shift();
-    if (seen.has(id)) continue;
-    seen.add(id);
-    if (!state.expandedAncestors.has(id)) continue;
-    for (const parentId of index.get(id)?.parents || []) {
-      visible.add(parentId);
-      for (const spouseId of index.get(parentId)?.spouses || []) visible.add(spouseId);
-      queue.push(parentId);
+  // Anyone visible (however they got there — parent, spouse, in-law) can have
+  // their expansion applied, so iterate until no expansion adds new people.
+  const applied = new Set();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const id of [...visible]) {
+      if (applied.has(id) || !state.expandedAncestors.has(id)) continue;
+      applied.add(id);
+      for (const parentId of index.get(id)?.parents || []) {
+        if (!visible.has(parentId)) changed = true;
+        visible.add(parentId);
+        for (const spouseId of index.get(parentId)?.spouses || []) {
+          if (!visible.has(spouseId)) changed = true;
+          visible.add(spouseId);
+        }
+      }
     }
   }
   return visible;
