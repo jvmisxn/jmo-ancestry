@@ -590,11 +590,11 @@ function renderTree() {
     group.addEventListener("pointerdown", (event) => {
       event.stopPropagation();
     });
-    group.addEventListener("click", () => selectPerson(node.person.id, state.collapseCollateral, true));
+    group.addEventListener("click", () => selectPerson(node.person.id, false, true));
     group.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        selectPerson(node.person.id, state.collapseCollateral, true);
+        selectPerson(node.person.id, false, true);
       }
     });
 
@@ -1621,7 +1621,7 @@ function linkGroup(label, ids = []) {
         <small class="relation-meta">${escapeHtml(personListMeta(person) || "Open profile")}</small>
       `;
       button.addEventListener("click", () => {
-        selectPerson(id, state.collapseCollateral, true);
+        selectPerson(id, false, true);
       });
       return button;
     }),
@@ -1654,7 +1654,7 @@ function renderPersonRow(person) {
   if (flags.childElementCount) button.append(flags);
 
   button.addEventListener("click", () => {
-    selectPerson(person.id, state.collapseCollateral, true);
+    selectPerson(person.id, false, true);
   });
   return button;
 }
