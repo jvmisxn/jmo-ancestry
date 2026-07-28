@@ -1321,6 +1321,10 @@ function layoutLinks(nodes, index, directIds) {
     const busY = childTopY - 26;
     const minChildX = Math.min(...childrenByX.map((child) => child.x));
     const maxChildX = Math.max(...childrenByX.map((child) => child.x));
+    // The bus must reach the parent drop point: shifted ancestor lanes can push
+    // the parents' center outside the children's horizontal span.
+    const busMinX = Math.min(minChildX, parentCenter);
+    const busMaxX = Math.max(maxChildX, parentCenter);
 
     links.push({
       kind: "family-link",
@@ -1330,7 +1334,7 @@ function layoutLinks(nodes, index, directIds) {
     links.push({
       kind: "family-link",
       direct,
-      d: `M ${minChildX} ${busY} L ${maxChildX} ${busY}`,
+      d: `M ${busMinX} ${busY} L ${busMaxX} ${busY}`,
     });
 
     for (const childNode of childrenByX) {
