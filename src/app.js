@@ -1504,10 +1504,42 @@ function selectPerson(id, reroot = true, openProfile = true) {
     state.rootId = id;
     resetExpandedAncestors();
     fitTree();
+  } else if (state.collapseCollateral && revealAncestorPath(id)) {
+    fitTree();
   } else {
     ensurePersonVisible(id);
   }
   render();
+}
+
+// Selecting a hidden ancestor (from search, deep links, or profile relations)
+// expands the chain of parent reveals leading to them, so the tree shows the
+// person instead of silently keeping them off-screen. Returns true only when
+// new expansions were added; already-visible or unreachable people fall back
+// to the pan-into-view behavior.
+function revealAncestorPath(targetId) {
+  const index = relationshipIndex();
+  if (!state.rootId || !index.has(targetId)) return false;
+  const visible = expandedTreeIds(state.rootId, index);
+  if (visible.has(targetId)) return false;
+
+  const queue = [...visible].map((id) => ({ id, chain: [] }));
+  const seen = new Set(visible);
+  while (queue.length) {
+    const { id, chain } = queue.shift();
+    for (const parentId of index.get(id)?.parents || []) {
+      if (seen.has(parentId)) continue;
+      seen.add(parentId);
+      const nextChain = [...chain, id];
+      const parentSpouses = index.get(parentId)?.spouses || new Set();
+      if (parentId === targetId || parentSpouses.has(targetId)) {
+        for (const link of nextChain) state.expandedAncestors.add(link);
+        return true;
+      }
+      queue.push({ id: parentId, chain: nextChain });
+    }
+  }
+  return false;
 }
 
 // Pan the current view to a person selected from the list or profile links,
@@ -1951,6 +1983,7 @@ export const __test = {
   relationshipIndex,
   buildBranch,
   expandedTreeIds,
+  revealAncestorPath,
   directRelatives,
   layoutNodes,
   layoutLinks,

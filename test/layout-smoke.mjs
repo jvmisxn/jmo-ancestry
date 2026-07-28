@@ -57,6 +57,7 @@ app.state.data = data;
 const failures = [];
 const warnings = [];
 let laneChecks = 0;
+let revealChecks = 0;
 
 const checkNodes = (nodes, rootId, mode) => {
   const seen = new Set();
@@ -119,9 +120,33 @@ for (const person of data.people) {
       failures.push(`minimal root=${person.id}: link with NaN path (${link.kind})`);
     }
   }
+
+  // Selecting a hidden ancestor must reveal them: from a collapsed minimal
+  // tree, revealAncestorPath + expandedTreeIds must end with the target visible.
+  const ancestors = [];
+  const upQueue = [person.id];
+  const upSeen = new Set([person.id]);
+  while (upQueue.length) {
+    const id = upQueue.shift();
+    for (const parentId of index.get(id)?.parents || []) {
+      if (upSeen.has(parentId)) continue;
+      upSeen.add(parentId);
+      ancestors.push(parentId);
+      upQueue.push(parentId);
+    }
+  }
+  for (const ancestorId of ancestors) {
+    app.state.expandedAncestors = new Set();
+    revealChecks += 1;
+    const revealed = app.revealAncestorPath(ancestorId);
+    const nowVisible = app.expandedTreeIds(person.id, index);
+    if (!revealed || !nowVisible.has(ancestorId)) {
+      failures.push(`minimal root=${person.id}: revealAncestorPath failed to surface ancestor ${ancestorId}`);
+    }
+  }
 }
 
-console.log(`Checked ${data.people.length} roots (${laneChecks} ancestor lane placements) in ${dataPath}`);
+console.log(`Checked ${data.people.length} roots (${laneChecks} ancestor lane placements, ${revealChecks} ancestor reveals) in ${dataPath}`);
 if (warnings.length) {
   console.log(`Warnings (${warnings.length} row overlaps, first 10):`);
   for (const warning of warnings.slice(0, 10)) console.log(`  - ${warning}`);
