@@ -416,11 +416,18 @@ function renderLifeStory(person) {
 
   els.detailStory.replaceChildren();
   if (obituary) {
-    const badge = document.createElement("p");
+    const badge = document.createElement(obituary.url ? "a" : "p");
     badge.className = "story-kicker";
     badge.textContent = obituary.publication
       ? `Obituary available from ${obituary.publication}`
       : "Obituary available";
+    if (obituary.url) {
+      badge.href = obituary.url;
+      badge.target = "_blank";
+      badge.rel = "noreferrer";
+      badge.title = obituary.title || "Open the obituary in a new tab";
+      badge.textContent += " ↗";
+    }
     els.detailStory.append(badge);
   }
 
