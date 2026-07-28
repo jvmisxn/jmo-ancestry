@@ -301,19 +301,33 @@ function renderWorkspaceSummary() {
 }
 
 function searchMatches(term) {
-  return people()
-    .filter((person) => {
-      const haystack = [
-        person.name,
-        person.birth?.place,
-        person.death?.place,
-        person.notes,
-        ...(person.aliases || []),
-        ...(person.tags || []),
-      ].join(" ").toLowerCase();
-      return !term || haystack.includes(term);
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const matches = people().filter((person) => {
+    const haystack = [
+      person.name,
+      person.birth?.place,
+      person.death?.place,
+      person.notes,
+      ...(person.aliases || []),
+      ...(person.tags || []),
+    ].join(" ").toLowerCase();
+    return !term || haystack.includes(term);
+  });
+  if (!term) return matches.sort((a, b) => a.name.localeCompare(b.name));
+  return matches
+    .map((person) => ({ person, rank: searchRank(person, term) }))
+    .sort((a, b) => a.rank - b.rank || a.person.name.localeCompare(b.person.name))
+    .map((entry) => entry.person);
+}
+
+// Rank name hits above place/note/tag hits so typing a name surfaces that
+// person first and Enter selects who the user actually typed.
+function searchRank(person, term) {
+  const name = person.name.toLowerCase();
+  if (name.startsWith(term)) return 0;
+  if (name.split(/\s+/).some((word) => word.startsWith(term))) return 1;
+  if (name.includes(term)) return 2;
+  if ((person.aliases || []).some((alias) => alias.toLowerCase().includes(term))) return 3;
+  return 4;
 }
 
 function defaultPeopleSummary() {
