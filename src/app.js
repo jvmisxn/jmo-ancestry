@@ -1,4 +1,5 @@
 const STORAGE_KEY = "jmo-ancestry-family-data";
+const COMPACT_BREAKPOINT = 1180;
 
 const state = {
   data: null,
@@ -36,16 +37,27 @@ const els = {
   fit: document.querySelector("#fit-tree"),
   exportJson: document.querySelector("#export-json"),
   title: document.querySelector("#tree-title"),
+  treeSubtitle: document.querySelector("#tree-subtitle"),
   count: document.querySelector("#tree-count"),
+  treeFocusName: document.querySelector("#tree-focus-name"),
+  selectedName: document.querySelector("#selected-name"),
+  selectedContext: document.querySelector("#selected-context"),
   viewport: document.querySelector("#tree-viewport"),
   svg: document.querySelector("#tree-svg"),
+  workspaceTitle: document.querySelector("#workspace-title"),
+  workspaceMeta: document.querySelector("#workspace-meta"),
+  peopleSummary: document.querySelector("#people-summary"),
   detailName: document.querySelector("#detail-name"),
+  detailContext: document.querySelector("#detail-context"),
+  detailMeta: document.querySelector("#detail-meta"),
   detailPhoto: document.querySelector("#detail-photo"),
   detailStory: document.querySelector("#detail-story"),
   detailFacts: document.querySelector("#detail-facts"),
   detailNotes: document.querySelector("#detail-notes"),
   detailRelations: document.querySelector("#detail-relations"),
   detailSources: document.querySelector("#detail-sources"),
+  relationsHeading: document.querySelector("#relations-heading"),
+  sourcesHeading: document.querySelector("#sources-heading"),
   sourcesPanel: document.querySelector("#sources-panel"),
   toggleSources: document.querySelector("#toggle-sources"),
   dataStatus: document.querySelector("#data-status"),
@@ -89,7 +101,7 @@ async function init() {
     render();
   });
   els.homePerson.addEventListener("click", () => {
-    state.selectedId = state.data.meta.defaultPersonId || state.data.people[0]?.id;
+    state.selectedId = state.data.meta?.defaultPersonId || state.data.people[0]?.id;
     state.rootId = state.selectedId;
     resetExpandedAncestors();
     fitTree();
@@ -97,11 +109,13 @@ async function init() {
   });
   els.togglePeople.addEventListener("click", () => {
     state.peopleCollapsed = !state.peopleCollapsed;
+    if (isCompactViewport() && !state.peopleCollapsed) state.profileCollapsed = true;
     syncPanelState();
     fitTreeAfterLayout();
   });
   els.toggleProfile.addEventListener("click", () => {
     state.profileCollapsed = !state.profileCollapsed;
+    if (isCompactViewport() && !state.profileCollapsed) state.peopleCollapsed = true;
     syncPanelState();
     fitTreeAfterLayout();
   });
@@ -115,8 +129,9 @@ async function init() {
   });
   els.viewport.addEventListener("wheel", onZoom, { passive: false });
   enableDrag();
+  window.addEventListener("resize", fitTreeAfterLayout);
 
-  state.profileCollapsed = true;
+  applyDefaultPanelState();
   syncPanelState();
   render();
   fitTreeAfterLayout();
@@ -125,6 +140,16 @@ async function init() {
 async function fetchSampleData() {
   const response = await fetch("./data/sample-family.json");
   return response.json();
+}
+
+function isCompactViewport() {
+  return window.innerWidth <= COMPACT_BREAKPOINT;
+}
+
+function applyDefaultPanelState() {
+  const compact = isCompactViewport();
+  state.peopleCollapsed = compact;
+  state.profileCollapsed = compact;
 }
 
 function loadStoredData() {
@@ -165,8 +190,7 @@ function adoptData(data) {
   state.rootId = state.selectedId;
   state.collapseCollateral = true;
   resetExpandedAncestors();
-  state.peopleCollapsed = true;
-  state.profileCollapsed = true;
+  applyDefaultPanelState();
   syncPanelState();
   els.search.value = "";
   fitTree();
@@ -209,6 +233,7 @@ function relationshipIndex() {
 
 function render() {
   syncPanelState();
+  renderWorkspaceSummary();
   renderPeople();
   renderDetails();
   renderTree();
@@ -218,20 +243,36 @@ function render() {
 function syncPanelState() {
   document.body.classList.toggle("people-collapsed", state.peopleCollapsed);
   document.body.classList.toggle("profile-collapsed", state.profileCollapsed);
+  document.body.classList.toggle("has-split-focus", state.selectedId !== state.rootId);
   els.togglePeople.textContent = "People";
   els.toggleProfile.textContent = "Profile";
   els.togglePeople.setAttribute("aria-pressed", String(!state.peopleCollapsed));
   els.toggleProfile.setAttribute("aria-pressed", String(!state.profileCollapsed));
+  els.togglePeople.title = state.peopleCollapsed ? "Show people directory" : "Hide people directory";
+  els.toggleProfile.title = state.profileCollapsed ? "Show profile panel" : "Hide profile panel";
 }
 
 function renderDataStatus(message, tone = "neutral") {
   const isSample = people().some((person) => (person.tags || []).includes("sample"));
   const summary = message || (isSample
-    ? "Sample data loaded. Load your private family.json to view the real tree."
-    : `${people().length} people loaded${state.hasStoredData ? " from this browser's saved copy" : ""}. Nothing is uploaded.`);
+    ? "Sample data loaded. Load your private family.json to replace it with your private research set."
+    : `${people().length} people loaded${state.hasStoredData ? " from this browser's saved copy" : ""}. Nothing leaves this browser.`);
   els.dataStatus.className = `data-status ${tone}`;
   els.dataStatus.textContent = summary;
   els.clearData.hidden = !state.hasStoredData;
+}
+
+function renderWorkspaceSummary() {
+  const meta = state.data?.meta || {};
+  const isSample = people().some((person) => (person.tags || []).includes("sample"));
+  els.workspaceTitle.textContent = meta.title || "Family tree";
+  els.workspaceMeta.textContent = formatMetaDate(meta.updated) || `${people().length} people`;
+  els.treeSubtitle.textContent = state.collapseCollateral
+    ? "Minimal tree view with manual ancestor reveals."
+    : "Full connected family network around the current tree focus.";
+  if (!els.search.value.trim()) {
+    els.peopleSummary.textContent = isSample ? "Sample dataset" : `${people().length} people`;
+  }
 }
 
 function renderPeople() {
@@ -243,34 +284,47 @@ function renderPeople() {
         person.birth?.place,
         person.death?.place,
         person.notes,
+        ...(person.aliases || []),
         ...(person.tags || []),
       ].join(" ").toLowerCase();
       return !term || haystack.includes(term);
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  els.list.replaceChildren(
-    ...matches.map((person) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = person.id === state.selectedId ? "person-row active" : "person-row";
-      button.innerHTML = `
-        <span>${escapeHtml(person.name)}</span>
-        <small>${formatYears(person)}</small>
-      `;
-      button.addEventListener("click", () => {
-        selectPerson(person.id, state.collapseCollateral, true);
-      });
-      return button;
-    }),
-  );
+  els.peopleSummary.textContent = term
+    ? `${matches.length} match${matches.length === 1 ? "" : "es"}`
+    : els.peopleSummary.textContent;
+
+  if (!matches.length) {
+    els.list.replaceChildren(
+      emptyState("No people matched that search.", "Try another name, place, note, or tag from your family JSON."),
+    );
+    return;
+  }
+
+  els.list.replaceChildren(...matches.map(renderPersonRow));
 }
 
 function renderDetails() {
   const person = personById(state.selectedId);
   if (!person) return;
+  const root = personById(state.rootId);
+  const sources = profileSources(person);
+  const relationTotal = relationIds(person).length;
 
   els.detailName.textContent = person.name;
+  els.detailContext.textContent = person.id === root?.id
+    ? "Selected person and current tree focus."
+    : `Selected profile while the tree stays focused on ${root?.name || person.name}.`;
+  els.detailMeta.replaceChildren(
+    ...[
+      metaPill(formatYears(person) || "Dates pending"),
+      person.birth?.place ? metaPill(`Born ${person.birth.place}`) : null,
+      person.death?.place ? metaPill(`Died ${person.death.place}`) : null,
+      sources.length ? metaPill(`${sources.length} source${sources.length === 1 ? "" : "s"}`) : null,
+      relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
+    ].filter(Boolean),
+  );
   renderProfilePhoto(person);
   renderLifeStory(person);
   els.detailFacts.replaceChildren(
@@ -281,27 +335,45 @@ function renderDetails() {
   );
   els.detailNotes.textContent = person.notes || "";
   els.detailNotes.hidden = !person.notes;
+  els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
+  els.centerPerson.disabled = person.id === root?.id;
 
   const relations = [
     ...linkGroup("Parents", person.parents),
     ...linkGroup("Spouses", person.spouses),
     ...linkGroup("Children", person.children),
   ];
+  els.relationsHeading.textContent = `Relationships (${relationTotal})`;
   els.detailRelations.replaceChildren(...relations);
 
-  const sourceItems = profileSources(person).map(renderSourceItem);
+  const sourceItems = sources.map(renderSourceItem);
+  els.sourcesHeading.textContent = `Sources (${sourceItems.length})`;
   els.toggleSources.hidden = sourceItems.length === 0;
   els.toggleSources.textContent = `Sources${sourceItems.length ? ` (${sourceItems.length})` : ""}`;
   els.toggleSources.setAttribute("aria-expanded", String(state.sourcesExpanded));
   els.sourcesPanel.hidden = !state.sourcesExpanded;
-  els.detailSources.replaceChildren(...sourceItems.length ? sourceItems : [empty("No sources attached yet.")]);
+  els.detailSources.replaceChildren(
+    ...sourceItems.length
+      ? sourceItems
+      : [emptyState("No sources attached yet.", "Add links, citations, photos, or obituary records in the JSON profile when they are ready.")],
+  );
 }
 
 function renderProfilePhoto(person) {
   const [photo] = profilePhotos(person);
   els.detailPhoto.replaceChildren();
-  els.detailPhoto.hidden = !photo;
-  if (!photo) return;
+  els.detailPhoto.hidden = false;
+  if (!photo) {
+    const placeholder = document.createElement("div");
+    placeholder.className = "photo-placeholder";
+    placeholder.textContent = initialsForName(person.name);
+    els.detailPhoto.append(placeholder);
+
+    const caption = document.createElement("p");
+    caption.textContent = "No profile photo attached yet.";
+    els.detailPhoto.append(caption);
+    return;
+  }
 
   const image = document.createElement("img");
   image.src = photo.url;
@@ -405,12 +477,14 @@ function renderSourceItem(source) {
   }
 
   const title = document.createElement("span");
+  title.className = "source-title";
   title.textContent = source.label || source.title || source.url;
   item.append(title);
 
   const meta = [source.date, source.publication, source.repository, source.confidence].filter(Boolean).join(" - ");
   if (meta) {
     const small = document.createElement("small");
+    small.className = "source-meta";
     small.textContent = meta;
     item.append(small);
   }
@@ -427,6 +501,7 @@ function renderSourceItem(source) {
 function renderTree() {
   const root = personById(state.rootId);
   if (!root) return;
+  const selected = personById(state.selectedId) || root;
 
   const index = relationshipIndex();
   const directIds = directRelatives(root.id, index);
@@ -442,10 +517,15 @@ function renderTree() {
   const directCount = nodes.filter((node) => directIds.has(node.person.id)).length;
   const collateralCount = nodes.length - directCount;
 
-  els.title.textContent = root.name;
+  els.title.textContent = state.collapseCollateral ? `Minimal tree for ${root.name}` : `Full network for ${root.name}`;
+  els.treeFocusName.textContent = root.name;
+  els.selectedName.textContent = selected.name;
+  els.selectedContext.textContent = selected.id === root.id
+    ? "Selected person matches the current tree focus."
+    : `Selected profile while tree focus stays on ${root.name}.`;
   els.count.textContent = state.collapseCollateral
-    ? `${nodes.length} visible, ${visibleParents} ancestors, ${hiddenParentCount} hidden`
-    : `${directCount} direct, ${collateralCount} collateral`;
+    ? `${nodes.length} visible people, ${visibleParents} ancestors shown, ${hiddenParentCount} hidden`
+    : `${directCount} direct line, ${collateralCount} collateral`;
   els.focusDirect.textContent = state.collapseCollateral ? "Show full tree" : "Minimal tree";
   els.focusDirect.title = state.collapseCollateral
     ? "Show every connected relative around this family"
@@ -1323,7 +1403,10 @@ function relationshipIds(id, index) {
 function selectPerson(id, reroot = true, openProfile = true) {
   state.selectedId = id;
   state.sourcesExpanded = false;
-  if (openProfile) state.profileCollapsed = false;
+  if (openProfile) {
+    state.profileCollapsed = false;
+    if (isCompactViewport()) state.peopleCollapsed = true;
+  }
   if (reroot) {
     state.rootId = id;
     resetExpandedAncestors();
@@ -1480,7 +1563,7 @@ async function importData(event) {
     adoptData(data);
     renderDataStatus(
       state.hasStoredData
-        ? `Loaded ${data.people.length} people from ${file.name}. Saved in this browser only - nothing is uploaded.`
+        ? `Loaded ${data.people.length} people from ${file.name}. Saved in this browser only; nothing is uploaded.`
         : `Loaded ${data.people.length} people from ${file.name}. Could not save in this browser, so re-import next visit. Nothing was uploaded.`,
       "success",
     );
@@ -1518,7 +1601,9 @@ function fact(label, value) {
 }
 
 function linkGroup(label, ids = []) {
-  if (!ids.length) return [empty(`No ${label.toLowerCase()} recorded.`)];
+  if (!ids.length) {
+    return [emptyState(`No ${label.toLowerCase()} recorded.`, `Add ${label.toLowerCase()} in the JSON when that branch is confirmed.`)];
+  }
   const heading = document.createElement("h3");
   heading.textContent = label;
   return [
@@ -1528,7 +1613,13 @@ function linkGroup(label, ids = []) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "relation-item";
-      button.textContent = person?.name || id;
+      button.innerHTML = `
+        <span class="relation-name">
+          <strong>${escapeHtml(person?.name || id)}</strong>
+          <small>${escapeHtml(formatYears(person || {}))}</small>
+        </span>
+        <small class="relation-meta">${escapeHtml(personListMeta(person) || "Open profile")}</small>
+      `;
       button.addEventListener("click", () => {
         selectPerson(id, state.collapseCollateral, true);
       });
@@ -1537,11 +1628,96 @@ function linkGroup(label, ids = []) {
   ];
 }
 
+function renderPersonRow(person) {
+  const button = document.createElement("button");
+  const isSelected = person.id === state.selectedId;
+  const isFocused = person.id === state.rootId;
+  button.type = "button";
+  button.className = `person-row${isSelected ? " active" : ""}${isFocused ? " focused" : ""}`;
+  button.innerHTML = `
+    <span class="person-row-main">
+      <span class="person-row-name">${escapeHtml(person.name)}</span>
+      <small class="person-row-years">${escapeHtml(formatYears(person) || "")}</small>
+    </span>
+    <small class="person-row-meta">${escapeHtml(personListMeta(person) || "No date or place details yet.")}</small>
+  `;
+
+  const flags = document.createElement("span");
+  flags.className = "person-row-flags";
+  if (isSelected) flags.append(metaPill("Selected", "selected"));
+  if (isFocused) flags.append(metaPill("Tree focus", "focused"));
+  for (const tag of (person.tags || []).filter((tag) => tag !== "sample").slice(0, 2)) {
+    flags.append(metaPill(tag));
+  }
+  const sourceCount = profileSources(person).length;
+  if (sourceCount) flags.append(metaPill(`${sourceCount} source${sourceCount === 1 ? "" : "s"}`));
+  if (flags.childElementCount) button.append(flags);
+
+  button.addEventListener("click", () => {
+    selectPerson(person.id, state.collapseCollateral, true);
+  });
+  return button;
+}
+
+function emptyState(title, copy) {
+  const item = document.createElement("div");
+  item.className = "empty-state";
+
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+  item.append(heading);
+
+  if (copy) {
+    const paragraph = document.createElement("p");
+    paragraph.className = "empty-state-copy";
+    paragraph.textContent = copy;
+    item.append(paragraph);
+  }
+
+  return item;
+}
+
 function empty(message) {
   const item = document.createElement("p");
   item.className = "empty";
   item.textContent = message;
   return item;
+}
+
+function metaPill(label, tone = "") {
+  const pill = document.createElement("span");
+  pill.className = `meta-pill${tone ? ` ${tone}` : ""}`;
+  pill.textContent = label;
+  return pill;
+}
+
+function relationIds(person) {
+  return [...new Set([
+    ...(person.parents || []),
+    ...(person.spouses || []),
+    ...(person.children || []),
+  ])];
+}
+
+function personListMeta(person) {
+  if (!person) return "";
+  const details = [
+    person.birth?.place,
+    person.death?.place ? `Died in ${person.death.place}` : "",
+    person.aliases?.length ? `AKA ${person.aliases[0]}` : "",
+    person.notes ? truncate(person.notes, 72) : "",
+  ].filter(Boolean);
+  return details.slice(0, 2).join(" • ");
+}
+
+function initialsForName(name = "") {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "?";
 }
 
 function formatYears(person) {
@@ -1554,6 +1730,13 @@ function formatYears(person) {
 function formatEvent(event) {
   if (!event) return "";
   return [event.date, event.place].filter(Boolean).join(" - ");
+}
+
+function formatMetaDate(value) {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return `Updated ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(parsed)}`;
 }
 
 function namesForIds(ids = []) {
@@ -1582,6 +1765,11 @@ function splitParagraphs(value = "") {
 function shortNodeName(name = "") {
   const clean = String(name).replace(/\s+/g, " ").trim();
   return clean.length > 25 ? `${clean.slice(0, 24)}...` : clean;
+}
+
+function truncate(value = "", limit = 72) {
+  const clean = String(value).replace(/\s+/g, " ").trim();
+  return clean.length > limit ? `${clean.slice(0, limit - 1)}...` : clean;
 }
 
 function cssSafeId(value = "") {

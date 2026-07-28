@@ -4,91 +4,143 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JMO Ancestry</title>
-    <link rel="stylesheet" href="./src/styles.css?v=focus-pan-1" />
+    <link rel="stylesheet" href="./src/styles.css?v=workspace-revamp-1" />
   </head>
   <body>
     <main class="app-shell">
       <aside class="sidebar" aria-label="Family tree controls">
-        <div class="brand-block">
-          <p class="eyebrow">JMO</p>
-          <h1>Ancestry</h1>
+        <div class="sidebar-shell">
+          <div class="brand-block">
+            <p class="eyebrow">JMO Research Workspace</p>
+            <h1>Ancestry</h1>
+            <p class="shell-copy">Local-first family tree review with private JSON import and export kept in your browser.</p>
+          </div>
+
+          <section class="workspace-section workspace-section-intro">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Dataset</p>
+                <h2 id="workspace-title">Family tree</h2>
+              </div>
+              <p id="workspace-meta" class="section-meta"></p>
+            </div>
+
+            <label class="search">
+              <span>Find a person</span>
+              <input id="person-search" type="search" placeholder="Search names, places, notes" autocomplete="off" />
+            </label>
+
+            <div class="toolbar" aria-label="Tree actions">
+              <button id="load-json" type="button" title="Load private family data">Load data</button>
+              <input id="import-json" class="file-input" type="file" accept="application/json,.json" />
+              <button id="export-json" type="button" title="Download family data">Export data</button>
+              <button id="clear-data" type="button" title="Remove the saved copy from this browser and return to sample data" hidden>Forget data</button>
+            </div>
+
+            <div id="data-status" class="data-status" role="status"></div>
+          </section>
+
+          <section class="workspace-section" aria-labelledby="people-heading">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Directory</p>
+                <h2 id="people-heading">People</h2>
+              </div>
+              <p id="people-summary" class="section-meta"></p>
+            </div>
+            <div id="person-list" class="person-list"></div>
+          </section>
         </div>
-
-        <label class="search">
-          <span>Find a person</span>
-          <input id="person-search" type="search" placeholder="Search names, places, notes" autocomplete="off" />
-        </label>
-
-        <div class="toolbar" aria-label="Tree actions">
-          <button id="load-json" type="button" title="Load private family data">Load data</button>
-          <input id="import-json" class="file-input" type="file" accept="application/json,.json" />
-          <button id="export-json" type="button" title="Download family data">Export data</button>
-          <button id="clear-data" type="button" title="Remove the saved copy from this browser and return to sample data" hidden>Forget data</button>
-        </div>
-
-        <div id="data-status" class="data-status" role="status"></div>
-
-        <section class="panel">
-          <h2>People</h2>
-          <div id="person-list" class="person-list"></div>
-        </section>
       </aside>
 
       <section class="tree-area" aria-label="Family tree visualization">
-        <div class="tree-header">
-          <div>
-            <p class="eyebrow">Tree focused on</p>
-            <h2 id="tree-title">Loading family tree...</h2>
-          </div>
-          <div class="tree-tools">
-            <div class="tree-summary">
-              <div id="tree-count" class="tree-count"></div>
-              <div class="legend" aria-label="Tree legend">
-                <span><i class="legend-swatch direct"></i>Direct line</span>
-                <span><i class="legend-swatch collateral"></i>Collateral</span>
+        <div class="tree-shell">
+          <div class="tree-header">
+            <div class="tree-heading">
+              <p class="eyebrow">Research board</p>
+              <h2 id="tree-title">Loading family tree...</h2>
+              <p id="tree-subtitle" class="tree-subtitle"></p>
+            </div>
+            <div class="tree-tools">
+              <div class="tree-summary">
+                <div class="legend" aria-label="Tree legend">
+                  <span><i class="legend-swatch direct"></i>Direct line</span>
+                  <span><i class="legend-swatch collateral"></i>Collateral</span>
+                </div>
+              </div>
+              <div class="view-actions" aria-label="View panels">
+                <button id="focus-direct" type="button" title="Show every connected relative around this family">Show full tree</button>
+                <button id="fit-tree" type="button" title="Fit tree to view">Fit view</button>
+                <button id="toggle-people" type="button" aria-pressed="false">People</button>
+                <button id="toggle-profile" type="button" aria-pressed="false">Profile</button>
               </div>
             </div>
-            <div class="view-actions" aria-label="View panels">
-              <button id="focus-direct" type="button" title="Show every connected relative around this family">Show full tree</button>
-              <button id="fit-tree" type="button" title="Fit tree to view">Fit view</button>
-              <button id="toggle-people" type="button" aria-pressed="false">People</button>
-              <button id="toggle-profile" type="button" aria-pressed="false">Profile</button>
+          </div>
+
+          <div class="tree-stage">
+            <div class="tree-focus-bar">
+              <article class="focus-card focus-card-root">
+                <span class="focus-label">Tree focus</span>
+                <strong id="tree-focus-name">Loading family tree...</strong>
+                <small id="tree-count" class="tree-count"></small>
+              </article>
+              <article class="focus-card focus-card-selected">
+                <span class="focus-label">Selected profile</span>
+                <strong id="selected-name">Select someone</strong>
+                <small id="selected-context">Choose a person from the tree or the people directory.</small>
+              </article>
+            </div>
+
+            <div id="tree-viewport" class="tree-viewport">
+              <svg id="tree-svg" role="img" aria-label="Interactive family tree"></svg>
             </div>
           </div>
-        </div>
-        <div id="tree-viewport" class="tree-viewport">
-          <svg id="tree-svg" role="img" aria-label="Interactive family tree"></svg>
         </div>
       </section>
 
       <aside class="details" aria-label="Selected person details">
-        <button id="close-profile" class="window-close" type="button" title="Close profile">Close</button>
-        <section class="panel person-card">
-          <p class="eyebrow">Profile</p>
-          <h2 id="detail-name">Select someone</h2>
-          <div class="profile-actions">
-            <button id="center-person" type="button">Make tree focus</button>
-            <button id="home-person" type="button">Return to start</button>
-            <button id="toggle-sources" type="button" aria-expanded="false">Sources</button>
-          </div>
-          <div id="detail-photo" class="profile-photo"></div>
-          <article id="detail-story" class="life-story"></article>
-          <dl id="detail-facts"></dl>
-          <div id="detail-notes" class="notes"></div>
-        </section>
+        <div class="details-shell">
+          <button id="close-profile" class="window-close" type="button" title="Close profile">Close</button>
 
-        <section class="panel">
-          <h2>Relationships</h2>
-          <div id="detail-relations" class="relation-list"></div>
-        </section>
+          <section class="workspace-section profile-section">
+            <p class="eyebrow">Profile</p>
+            <h2 id="detail-name">Select someone</h2>
+            <p id="detail-context" class="section-meta">Choose a person from the tree or the people directory.</p>
+            <div id="detail-meta" class="detail-meta"></div>
+            <div class="profile-actions">
+              <button id="center-person" type="button">Make tree focus</button>
+              <button id="home-person" type="button">Return to start</button>
+              <button id="toggle-sources" type="button" aria-expanded="false">Sources</button>
+            </div>
+            <div id="detail-photo" class="profile-photo"></div>
+            <article id="detail-story" class="life-story"></article>
+            <dl id="detail-facts"></dl>
+            <div id="detail-notes" class="notes"></div>
+          </section>
 
-        <section id="sources-panel" class="panel sources-panel">
-          <h2>Sources</h2>
-          <div id="detail-sources" class="source-list"></div>
-        </section>
+          <section class="workspace-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Connections</p>
+                <h2 id="relations-heading">Relationships</h2>
+              </div>
+            </div>
+            <div id="detail-relations" class="relation-list"></div>
+          </section>
+
+          <section id="sources-panel" class="workspace-section sources-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Evidence</p>
+                <h2 id="sources-heading">Sources</h2>
+              </div>
+            </div>
+            <div id="detail-sources" class="source-list"></div>
+          </section>
+        </div>
       </aside>
     </main>
 
-    <script type="module" src="./src/app.js?v=expand-fixpoint-1"></script>
+    <script type="module" src="./src/app.js?v=workspace-revamp-1"></script>
   </body>
 </html>
