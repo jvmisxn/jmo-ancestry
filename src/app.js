@@ -1936,7 +1936,27 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
-init().catch((error) => {
-  els.title.textContent = "Could not load family tree";
-  console.error(error);
-});
+if (!globalThis.__JMO_HEADLESS_TEST__) {
+  init().catch((error) => {
+    els.title.textContent = "Could not load family tree";
+    console.error(error);
+  });
+}
+
+// Headless smoke tests (test/layout-smoke.mjs) drive the pure layout helpers
+// directly; browsers never set __JMO_HEADLESS_TEST__ so this stays inert.
+export const __test = {
+  state,
+  NODE,
+  relationshipIndex,
+  buildBranch,
+  expandedTreeIds,
+  directRelatives,
+  layoutNodes,
+  layoutLinks,
+  layoutFamilyUnits,
+  orderedParentIds,
+  ancestorLaneDirection,
+  generationOffset,
+  treeBounds,
+};
