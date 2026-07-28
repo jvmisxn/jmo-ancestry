@@ -80,6 +80,18 @@ async function init() {
   state.rootId = state.selectedId;
 
   els.search.addEventListener("input", renderPeople);
+  els.search.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      const term = els.search.value.trim().toLowerCase();
+      if (!term) return;
+      const [first] = searchMatches(term);
+      if (first) selectPerson(first.id, false, true);
+    } else if (event.key === "Escape" && els.search.value) {
+      event.stopPropagation();
+      els.search.value = "";
+      renderPeople();
+    }
+  });
   els.loadJson.addEventListener("click", () => els.importJson.click());
   els.importJson.addEventListener("change", importData);
   els.clearData.addEventListener("click", forgetStoredData);
@@ -264,20 +276,18 @@ function renderDataStatus(message, tone = "neutral") {
 
 function renderWorkspaceSummary() {
   const meta = state.data?.meta || {};
-  const isSample = people().some((person) => (person.tags || []).includes("sample"));
   els.workspaceTitle.textContent = meta.title || "Family tree";
   els.workspaceMeta.textContent = formatMetaDate(meta.updated) || `${people().length} people`;
   els.treeSubtitle.textContent = state.collapseCollateral
     ? "Minimal tree view with manual ancestor reveals."
     : "Full connected family network around the current tree focus.";
   if (!els.search.value.trim()) {
-    els.peopleSummary.textContent = isSample ? "Sample dataset" : `${people().length} people`;
+    els.peopleSummary.textContent = defaultPeopleSummary();
   }
 }
 
-function renderPeople() {
-  const term = els.search.value.trim().toLowerCase();
-  const matches = people()
+function searchMatches(term) {
+  return people()
     .filter((person) => {
       const haystack = [
         person.name,
@@ -290,10 +300,20 @@ function renderPeople() {
       return !term || haystack.includes(term);
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function defaultPeopleSummary() {
+  const isSample = people().some((person) => (person.tags || []).includes("sample"));
+  return isSample ? "Sample dataset" : `${people().length} people`;
+}
+
+function renderPeople() {
+  const term = els.search.value.trim().toLowerCase();
+  const matches = searchMatches(term);
 
   els.peopleSummary.textContent = term
     ? `${matches.length} match${matches.length === 1 ? "" : "es"}`
-    : els.peopleSummary.textContent;
+    : defaultPeopleSummary();
 
   if (!matches.length) {
     els.list.replaceChildren(
