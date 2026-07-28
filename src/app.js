@@ -971,16 +971,17 @@ function ancestorPathSlot(path, rootParentCount) {
   const direction = ancestorLaneDirection(path, rootParentCount);
   if (!direction) return 0;
 
-  let rest = 0;
+  const depthPastRootParent = Math.max(0, path.length - 1);
+  let branchRank = 0;
   for (let index = 1; index < path.length; index += 1) {
-    rest = rest * 2 + (path[index] === 0 ? 0 : 1);
+    branchRank = branchRank * 2 + (path[index] === 0 ? 0 : 1);
   }
 
-  if (direction < 0) {
-    return -(2 ** Math.max(0, path.length - 1) - rest);
-  }
-
-  return rest + 1;
+  const branchCount = 2 ** depthPastRootParent;
+  const outwardRank = direction < 0 ? branchRank : branchCount - 1 - branchRank;
+  const depthOffset = depthPastRootParent * 0.18;
+  const branchOffset = outwardRank * 0.62;
+  return direction * (1 + depthOffset + branchOffset);
 }
 
 function ancestorLaneDirection(path, rootParentCount) {
@@ -1366,7 +1367,8 @@ function directParentAnchorX(parentIds, childId, nodeById, index, directIds, fal
 }
 
 function directAncestorPath(startX, startY, endX, endY) {
-  return `M ${startX} ${startY} L ${endX} ${endY}`;
+  const midY = (startY + endY) / 2;
+  return `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
 }
 
 function familyCurvePath(startX, startY, endX, endY) {
