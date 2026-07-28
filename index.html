@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JMO Ancestry</title>
-    <link rel="stylesheet" href="./src/styles.css?v=deep-link-1" />
+    <link rel="stylesheet" href="./src/styles.css?v=drop-import-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -141,6 +141,13 @@
       </aside>
     </main>
 
-    <script type="module" src="./src/app.js?v=deep-link-1"></script>
+    <div id="drop-overlay" class="drop-overlay" hidden>
+      <div class="drop-overlay-card">
+        <strong>Drop your family JSON to load it</strong>
+        <p>Stays in this browser only. Nothing is uploaded.</p>
+      </div>
+    </div>
+
+    <script type="module" src="./src/app.js?v=drop-import-1"></script>
   </body>
 </html>

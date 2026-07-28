@@ -66,6 +66,7 @@ const els = {
   togglePeople: document.querySelector("#toggle-people"),
   toggleProfile: document.querySelector("#toggle-profile"),
   closeProfile: document.querySelector("#close-profile"),
+  dropOverlay: document.querySelector("#drop-overlay"),
 };
 
 async function init() {
@@ -152,6 +153,7 @@ async function init() {
   });
   els.viewport.addEventListener("wheel", onZoom, { passive: false });
   enableDrag();
+  enableDropImport();
   window.addEventListener("resize", fitTreeAfterLayout);
 
   applyDefaultPanelState();
@@ -1621,6 +1623,11 @@ function exportData() {
 async function importData(event) {
   const [file] = event.target.files;
   if (!file) return;
+  await loadFamilyFile(file);
+  event.target.value = "";
+}
+
+async function loadFamilyFile(file) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
@@ -1635,9 +1642,51 @@ async function importData(event) {
     );
   } catch (error) {
     renderDataStatus(`Could not load ${file.name}: ${error.message}`, "error");
-  } finally {
-    event.target.value = "";
   }
+}
+
+// Let a family JSON file be dropped anywhere on the app as an alternative to
+// the Load-data button. Uses a depth counter because dragenter/dragleave fire
+// for every child element crossed.
+function enableDropImport() {
+  let dragDepth = 0;
+
+  const hasFiles = (event) => [...(event.dataTransfer?.types || [])].includes("Files");
+  const hideOverlay = () => {
+    dragDepth = 0;
+    els.dropOverlay.hidden = true;
+  };
+
+  window.addEventListener("dragenter", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    els.dropOverlay.hidden = false;
+  });
+
+  window.addEventListener("dragover", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+  });
+
+  window.addEventListener("dragleave", (event) => {
+    if (!hasFiles(event)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) els.dropOverlay.hidden = true;
+  });
+
+  window.addEventListener("drop", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    hideOverlay();
+    const file = [...event.dataTransfer.files]
+      .find((candidate) => /\.json$/i.test(candidate.name) || candidate.type === "application/json");
+    if (!file) {
+      renderDataStatus("That file is not a .json family export. Drop a family.json file to load it.", "error");
+      return;
+    }
+    loadFamilyFile(file);
+  });
 }
 
 function validateData(data) {
