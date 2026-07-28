@@ -1214,7 +1214,22 @@ function orderedChildren(parentIds, index) {
       }
     }
   }
-  return children;
+  return sortByBirthYear(children);
+}
+
+// Siblings read oldest-to-youngest like a conventional family tree. Undated
+// children keep their recorded order after the dated ones (stable sort), so
+// hand-ordered JSON still means something when years are missing.
+function sortByBirthYear(ids) {
+  return ids
+    .map((id, recordedIndex) => ({ id, recordedIndex, year: birthYear(personById(id)) }))
+    .sort((a, b) => (a.year - b.year) || (a.recordedIndex - b.recordedIndex))
+    .map((entry) => entry.id);
+}
+
+function birthYear(person) {
+  const match = String(person?.birth?.date || "").match(/\d{4}/);
+  return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
 }
 
 function centeredFamilyRank(id, childOrder, rowOrder) {
