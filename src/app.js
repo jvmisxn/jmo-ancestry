@@ -358,7 +358,13 @@ function renderDetails() {
   if (!person) return;
   const root = personById(state.rootId);
   const sources = profileSources(person);
-  const relationTotal = relationIds(person).length;
+  const relations = profileRelations(person);
+  const relationTotal = new Set([
+    ...relations.parents,
+    ...relations.siblings,
+    ...relations.spouses,
+    ...relations.children,
+  ]).size;
 
   els.detailName.textContent = person.name;
   els.detailContext.textContent = person.id === root?.id
@@ -386,13 +392,18 @@ function renderDetails() {
   els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
   els.centerPerson.disabled = person.id === root?.id;
 
-  const relations = [
-    ...linkGroup("Parents", person.parents),
-    ...linkGroup("Spouses", person.spouses),
-    ...linkGroup("Children", person.children),
+  const relationItems = [
+    ...linkGroup("Parents", relations.parents),
+    ...linkGroup("Siblings", relations.siblings),
+    ...linkGroup("Spouses", relations.spouses),
+    ...linkGroup("Children", relations.children),
   ];
   els.relationsHeading.textContent = `Relationships (${relationTotal})`;
-  els.detailRelations.replaceChildren(...relations);
+  els.detailRelations.replaceChildren(
+    ...relationItems.length
+      ? relationItems
+      : [emptyState("No relationships recorded yet.", "Add parents, spouses, or children in the JSON when those connections are confirmed.")],
+  );
 
   const sourceItems = sources.map(renderSourceItem);
   els.sourcesHeading.textContent = `Sources (${sourceItems.length})`;
@@ -1730,9 +1741,7 @@ function fact(label, value) {
 }
 
 function linkGroup(label, ids = []) {
-  if (!ids.length) {
-    return [emptyState(`No ${label.toLowerCase()} recorded.`, `Add ${label.toLowerCase()} in the JSON when that branch is confirmed.`)];
-  }
+  if (!ids.length) return [];
   const heading = document.createElement("h3");
   heading.textContent = label;
   return [
@@ -1820,12 +1829,16 @@ function metaPill(label, tone = "") {
   return pill;
 }
 
-function relationIds(person) {
-  return [...new Set([
-    ...(person.parents || []),
-    ...(person.spouses || []),
-    ...(person.children || []),
-  ])];
+function profileRelations(person) {
+  const index = relationshipIndex();
+  const parents = orderedParentIds(person.id, index);
+  const siblings = orderedChildren(parents, index).filter((id) => id !== person.id);
+  return {
+    parents,
+    siblings,
+    spouses: [...(index.get(person.id)?.spouses || [])],
+    children: orderedChildren([person.id], index),
+  };
 }
 
 function personListMeta(person) {
