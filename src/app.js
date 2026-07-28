@@ -366,10 +366,13 @@ function renderDetails() {
     ...relations.children,
   ]).size;
 
+  const kinship = root ? kinshipLabel(person.id, root.id) : "";
   els.detailName.textContent = person.name;
   els.detailContext.textContent = person.id === root?.id
     ? "Selected person and current tree focus."
-    : `Selected profile while the tree stays focused on ${root?.name || person.name}.`;
+    : kinship
+      ? `${root.name}'s ${kinship}.`
+      : `Selected profile while the tree stays focused on ${root?.name || person.name}.`;
   els.detailMeta.replaceChildren(
     ...[
       metaPill(formatYears(person) || "Dates pending"),
@@ -586,9 +589,12 @@ function renderTree() {
   els.title.textContent = state.collapseCollateral ? `Minimal tree for ${root.name}` : `Full network for ${root.name}`;
   els.treeFocusName.textContent = root.name;
   els.selectedName.textContent = selected.name;
+  const selectedKinship = selected.id === root.id ? "" : kinshipLabel(selected.id, root.id, index);
   els.selectedContext.textContent = selected.id === root.id
     ? "Selected person matches the current tree focus."
-    : `Selected profile while tree focus stays on ${root.name}.`;
+    : selectedKinship
+      ? `${root.name}'s ${selectedKinship}.`
+      : `Selected profile while tree focus stays on ${root.name}.`;
   els.count.textContent = state.collapseCollateral
     ? `${nodes.length} visible people, ${visibleParents} ancestors shown, ${hiddenParentCount} hidden`
     : `${directCount} direct line, ${collateralCount} collateral`;
@@ -1873,6 +1879,79 @@ function profileRelations(person) {
   };
 }
 
+// The dataset has no gender field, so kinship labels stay gender-neutral
+// ("grandparent", "aunt or uncle", "1st cousin once removed"). Blood lines
+// walk parents only; spouses bridge with a single affinal hop on either side.
+function kinshipLabel(personId, rootId, index = relationshipIndex()) {
+  if (!personId || !rootId || personId === rootId) return "";
+  const blood = bloodKinshipLabel(personId, rootId, index);
+  if (blood) return blood;
+  if (index.get(rootId)?.spouses?.has(personId)) return "spouse";
+  for (const spouseId of index.get(personId)?.spouses || []) {
+    const spouseBlood = bloodKinshipLabel(spouseId, rootId, index);
+    if (spouseBlood) return `${spouseBlood}'s spouse`;
+  }
+  for (const spouseId of index.get(rootId)?.spouses || []) {
+    const inLaw = bloodKinshipLabel(personId, spouseId, index);
+    if (inLaw) return `spouse's ${inLaw}`;
+  }
+  return "";
+}
+
+// Label of person A relative to person B ("A is B's ___"), blood lines only.
+function bloodKinshipLabel(aId, bId, index) {
+  const aDepths = ancestorDepths(aId, index);
+  const bDepths = ancestorDepths(bId, index);
+  let best = null;
+  for (const [ancestorId, aUp] of aDepths) {
+    const bUp = bDepths.get(ancestorId);
+    if (bUp === undefined) continue;
+    if (!best || aUp + bUp < best.aUp + best.bUp) best = { aUp, bUp };
+  }
+  if (!best) return "";
+  const { aUp, bUp } = best;
+  if (aUp === 0) return lineLabel(bUp, "parent", "grandparent", "great-grandparent");
+  if (bUp === 0) return lineLabel(aUp, "child", "grandchild", "great-grandchild");
+  if (aUp === 1 && bUp === 1) return "sibling";
+  if (aUp === 1) return lineLabel(bUp - 1, "aunt or uncle", "great-aunt or great-uncle", "great-aunt or great-uncle", true);
+  if (bUp === 1) return lineLabel(aUp - 1, "niece or nephew", "great-niece or great-nephew", "great-niece or great-nephew", true);
+  const degree = Math.min(aUp, bUp) - 1;
+  const removed = Math.abs(aUp - bUp);
+  const removal = removed === 0 ? "" : removed === 1 ? " once removed" : removed === 2 ? " twice removed" : ` ${removed} times removed`;
+  return `${ordinal(degree)} cousin${removal}`;
+}
+
+// depth=1 → first label, 2 → second, 3 → third, deeper → "Nth <third>".
+// shiftOrdinal starts the "Nth" count at depth 3 (2nd great-aunt) instead of
+// depth 4, matching aunt/niece convention vs grandparent convention.
+function lineLabel(depth, one, two, deep, shiftOrdinal = false) {
+  if (depth <= 1) return one;
+  if (depth === 2) return two;
+  const count = depth - (shiftOrdinal ? 1 : 2);
+  return count <= 1 ? deep : `${ordinal(count)} ${deep}`;
+}
+
+function ancestorDepths(startId, index) {
+  const depths = new Map([[startId, 0]]);
+  const queue = [startId];
+  while (queue.length) {
+    const id = queue.shift();
+    for (const parentId of index.get(id)?.parents || []) {
+      if (depths.has(parentId)) continue;
+      depths.set(parentId, depths.get(id) + 1);
+      queue.push(parentId);
+    }
+  }
+  return depths;
+}
+
+function ordinal(value) {
+  const tens = value % 100;
+  if (tens >= 11 && tens <= 13) return `${value}th`;
+  const suffix = { 1: "st", 2: "nd", 3: "rd" }[value % 10] || "th";
+  return `${value}${suffix}`;
+}
+
 function personListMeta(person) {
   if (!person) return "";
   const details = [
@@ -1989,6 +2068,7 @@ export const __test = {
   layoutLinks,
   layoutFamilyUnits,
   orderedParentIds,
+  kinshipLabel,
   ancestorLaneDirection,
   generationOffset,
   treeBounds,
