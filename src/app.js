@@ -78,6 +78,16 @@ async function init() {
   }
   state.selectedId = state.data.meta?.defaultPersonId || state.data.people[0]?.id;
   state.rootId = state.selectedId;
+  const hashId = personIdFromHash();
+  if (hashId) {
+    state.selectedId = hashId;
+    state.rootId = hashId;
+  }
+
+  window.addEventListener("hashchange", () => {
+    const id = personIdFromHash();
+    if (id && id !== state.selectedId) selectPerson(id, false, true);
+  });
 
   els.search.addEventListener("input", renderPeople);
   els.search.addEventListener("keydown", (event) => {
@@ -115,6 +125,7 @@ async function init() {
   els.homePerson.addEventListener("click", () => {
     state.selectedId = state.data.meta?.defaultPersonId || state.data.people[0]?.id;
     state.rootId = state.selectedId;
+    syncHash();
     resetExpandedAncestors();
     fitTree();
     render();
@@ -200,6 +211,7 @@ function adoptData(data) {
   state.data = data;
   state.selectedId = data.meta?.defaultPersonId || data.people[0]?.id;
   state.rootId = state.selectedId;
+  syncHash();
   state.collapseCollateral = true;
   resetExpandedAncestors();
   applyDefaultPanelState();
@@ -1433,8 +1445,29 @@ function relationshipIds(id, index) {
   return [...(relations?.parents || []), ...(relations?.spouses || []), ...(relations?.children || [])];
 }
 
+// Keep the selected person in the URL hash so reloads and shared links
+// reopen the same profile instead of resetting to the default person.
+function personIdFromHash() {
+  const match = window.location.hash.match(/^#p=(.+)$/);
+  if (!match) return null;
+  try {
+    const id = decodeURIComponent(match[1]);
+    return personById(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+function syncHash() {
+  const target = state.selectedId ? `#p=${encodeURIComponent(state.selectedId)}` : "";
+  if (window.location.hash === target) return;
+  const base = window.location.pathname + window.location.search;
+  history.replaceState(null, "", target || base);
+}
+
 function selectPerson(id, reroot = true, openProfile = true) {
   state.selectedId = id;
+  syncHash();
   state.sourcesExpanded = false;
   if (openProfile) {
     state.profileCollapsed = false;
