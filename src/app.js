@@ -579,6 +579,7 @@ function renderTree() {
   const visibleIds = state.collapseCollateral ? expandedTreeIds(root.id, index) : null;
   const graph = buildBranch(root.id, index, visibleIds);
   const nodes = layoutNodes(graph, index);
+  const visibleIdSet = new Set(nodes.map((node) => node.person.id));
   const familyUnits = layoutFamilyUnits(nodes, index, directIds);
   const links = layoutLinks(nodes, index, directIds);
   const width = Math.max(els.viewport.clientWidth, 360);
@@ -640,10 +641,20 @@ function renderTree() {
     const visibleParentIds = parentIds.filter((id) => nodes.some((candidate) => candidate.person.id === id));
     const hiddenParents = parentIds.length - visibleParentIds.length;
     if (state.collapseCollateral && hiddenParents > 0) {
+      const above = hiddenAncestorsAbove(node.person.id, visibleIdSet, index);
+      const deepBranch = above > hiddenParents;
       g.append(ancestorToggle(node, {
-        label: `Show parent${hiddenParents === 1 ? "" : "s"}`,
-        ariaLabel: `Show parents of ${node.person.name}`,
-        onToggle: () => expandParents(node.person.id),
+        label: deepBranch ? `Show parents · ${above} above` : `Show parent${hiddenParents === 1 ? "" : "s"}`,
+        ariaLabel: deepBranch
+          ? `Show parents of ${node.person.name} (${above} hidden ancestors above, shift-click to reveal all)`
+          : `Show parents of ${node.person.name}`,
+        tooltip: deepBranch
+          ? `Reveal the next generation. Shift-click to reveal all ${above} ancestors above.`
+          : "",
+        onToggle: (event) => {
+          if (deepBranch && event?.shiftKey) expandAncestorBranch(node.person.id);
+          else expandParents(node.person.id);
+        },
       }));
     } else if (state.collapseCollateral && visibleParentIds.length > 0 && state.expandedAncestors.has(node.person.id)) {
       g.append(ancestorToggle(node, {
@@ -686,7 +697,7 @@ function renderTree() {
   }
 }
 
-function ancestorToggle(node, { label, ariaLabel, onToggle, collapse = false }) {
+function ancestorToggle(node, { label, ariaLabel, tooltip = "", onToggle, collapse = false }) {
   const toggle = svgEl("g", {
     class: `ancestor-expander ${collapse ? "collapse" : ""}`,
     transform: `translate(${node.x} ${node.y - NODE_HALF_HEIGHT - 28})`,
@@ -694,17 +705,23 @@ function ancestorToggle(node, { label, ariaLabel, onToggle, collapse = false }) 
     role: "button",
     "aria-label": ariaLabel,
   });
-  toggle.append(svgEl("rect", { x: -58, y: -14, width: 116, height: 26, rx: 13 }));
+  const width = Math.max(116, Math.round(label.length * 6.6) + 28);
+  toggle.append(svgEl("rect", { x: -width / 2, y: -14, width, height: 26, rx: 13 }));
   toggle.append(svgText(label, 0, 4, "ancestor-expander-text"));
+  if (tooltip) {
+    const title = svgEl("title", {});
+    title.textContent = tooltip;
+    toggle.append(title);
+  }
   toggle.addEventListener("pointerdown", (event) => event.stopPropagation());
   toggle.addEventListener("click", (event) => {
     event.stopPropagation();
-    onToggle();
+    onToggle(event);
   });
   toggle.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onToggle();
+      onToggle(event);
     }
   });
   return toggle;
@@ -799,8 +816,41 @@ function hiddenExpandableParentCount(nodes, index) {
   }, 0);
 }
 
+// Count the ancestors (and their spouses) still hidden above a person, so the
+// expander pill can show how deep the branch goes before any clicks.
+function hiddenAncestorsAbove(personId, visible, index) {
+  const queue = [...(index.get(personId)?.parents || [])];
+  const seen = new Set([personId]);
+  let count = 0;
+  while (queue.length) {
+    const id = queue.shift();
+    if (seen.has(id) || !personById(id)) continue;
+    seen.add(id);
+    if (!visible.has(id)) count += 1;
+    queue.push(...(index.get(id)?.parents || []));
+    queue.push(...(index.get(id)?.spouses || []));
+  }
+  return count;
+}
+
 function expandParents(personId) {
   state.expandedAncestors.add(personId);
+  fitTree();
+  render();
+}
+
+function expandAncestorBranch(personId) {
+  const index = relationshipIndex();
+  state.expandedAncestors.add(personId);
+  const queue = [...(index.get(personId)?.parents || [])];
+  const seen = new Set([personId]);
+  while (queue.length) {
+    const id = queue.shift();
+    if (seen.has(id) || !personById(id)) continue;
+    seen.add(id);
+    state.expandedAncestors.add(id);
+    queue.push(...(index.get(id)?.parents || []), ...(index.get(id)?.spouses || []));
+  }
   fitTree();
   render();
 }
@@ -2107,6 +2157,8 @@ export const __test = {
   relationshipIndex,
   buildBranch,
   expandedTreeIds,
+  hiddenAncestorsAbove,
+  expandAncestorBranch,
   revealAncestorPath,
   directRelatives,
   layoutNodes,
