@@ -367,6 +367,7 @@ function renderDetails() {
   ]).size;
 
   const kinship = root ? kinshipLabel(person.id, root.id) : "";
+  const age = ageAtDeath(person);
   els.detailName.textContent = person.name;
   els.detailContext.textContent = person.id === root?.id
     ? "Selected person and current tree focus."
@@ -378,6 +379,7 @@ function renderDetails() {
       metaPill(formatYears(person) || "Dates pending"),
       person.birth?.place ? metaPill(`Born ${person.birth.place}`) : null,
       person.death?.place ? metaPill(`Died ${person.death.place}`) : null,
+      age ? metaPill(age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
       sources.length ? metaPill(`${sources.length} source${sources.length === 1 ? "" : "s"}`) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
     ].filter(Boolean),
@@ -1988,6 +1990,34 @@ function initialsForName(name = "") {
     .toUpperCase() || "?";
 }
 
+// Age at death for the profile header. Exact only when both dates carry
+// year-month-day; year-only records get an "about" age so partial dates never
+// overstate precision. Dates that don't start with a 4-digit year (e.g.
+// "abt 1850") or that run backwards return null and show no age.
+function ageAtDeath(person) {
+  const birth = parseDateParts(person.birth?.date);
+  const death = parseDateParts(person.death?.date);
+  if (!birth || !death) return null;
+  if (birth.month && birth.day && death.month && death.day) {
+    const beforeBirthday = death.month < birth.month
+      || (death.month === birth.month && death.day < birth.day);
+    const years = death.year - birth.year - (beforeBirthday ? 1 : 0);
+    return years >= 0 ? { years, approx: false } : null;
+  }
+  const years = death.year - birth.year;
+  return years >= 0 ? { years, approx: true } : null;
+}
+
+function parseDateParts(value) {
+  const match = String(value || "").match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?/);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: match[2] ? Number(match[2]) : null,
+    day: match[3] ? Number(match[3]) : null,
+  };
+}
+
 function formatYears(person) {
   const born = person.birth?.date ? person.birth.date.slice(0, 4) : "";
   const died = person.death?.date ? person.death.date.slice(0, 4) : "";
@@ -2084,6 +2114,7 @@ export const __test = {
   layoutFamilyUnits,
   orderedParentIds,
   kinshipLabel,
+  ageAtDeath,
   ancestorLaneDirection,
   generationOffset,
   treeBounds,
