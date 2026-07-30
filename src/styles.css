@@ -720,6 +720,18 @@ dd,
   stroke-width: 2.75;
 }
 
+/* Connectors touching the hovered (or keyboard-focused) card, so any line in
+   a crowded row can be traced without changing the selection. */
+.tree-link.traced {
+  stroke: rgba(125, 79, 44, 0.95);
+  stroke-width: 3.25;
+  opacity: 1;
+}
+
+.tree-link.spouse-link.traced {
+  stroke-width: 2.75;
+}
+
 .family-unit {
   fill: rgba(255, 255, 255, 0.24);
   stroke: rgba(67, 99, 124, 0.14);

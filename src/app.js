@@ -929,13 +929,23 @@ function renderTree() {
   if (state.scale < 0.5) g.classList.add("overview-scale");
   els.svg.append(g);
 
+  const linkEls = [];
   for (const link of links) {
     const focused = link.people?.includes(selected.id);
-    g.append(svgEl("path", {
+    const el = svgEl("path", {
       class: `tree-link ${link.kind || ""} ${!state.collapseCollateral && !link.direct ? "dimmed" : ""} ${focused ? "focused" : ""}`,
       d: link.d,
-    }));
+    });
+    linkEls.push({ el, people: link.people || [] });
+    g.append(el);
   }
+  // Hovering (or keyboard-focusing) a card lights up every connector touching
+  // that person, so a line can be traced through the web without clicking.
+  const setLinkTrace = (personId, on) => {
+    for (const { el, people } of linkEls) {
+      if (people.includes(personId)) el.classList.toggle("traced", on);
+    }
+  };
 
   for (const unit of familyUnits) {
     g.append(svgEl("rect", {
@@ -991,6 +1001,10 @@ function renderTree() {
     group.addEventListener("pointerdown", (event) => {
       event.stopPropagation();
     });
+    group.addEventListener("pointerenter", () => setLinkTrace(node.person.id, true));
+    group.addEventListener("pointerleave", () => setLinkTrace(node.person.id, false));
+    group.addEventListener("focus", () => setLinkTrace(node.person.id, true));
+    group.addEventListener("blur", () => setLinkTrace(node.person.id, false));
     group.addEventListener("click", () => selectPerson(node.person.id, false, true));
     // Double-click (or Shift+Enter) refocuses the tree on that person directly,
     // skipping the select-then-"Make tree focus" round trip through the profile.
