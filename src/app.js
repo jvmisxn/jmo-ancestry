@@ -85,6 +85,9 @@ async function init() {
     state.selectedId = hashId;
     state.rootId = hashId;
   }
+  // Anchor the starting person in the URL (no history entry) so the first
+  // Back press after browsing returns here instead of doing nothing.
+  syncHash();
 
   window.addEventListener("hashchange", () => {
     const id = personIdFromHash();
@@ -127,7 +130,7 @@ async function init() {
   els.homePerson.addEventListener("click", () => {
     state.selectedId = state.data.meta?.defaultPersonId || state.data.people[0]?.id;
     state.rootId = state.selectedId;
-    syncHash();
+    syncHash(true);
     resetExpandedAncestors();
     fitTree();
     render();
@@ -1600,6 +1603,8 @@ function relationshipIds(id, index) {
 
 // Keep the selected person in the URL hash so reloads and shared links
 // reopen the same profile instead of resetting to the default person.
+// Selections push history entries so Back/Forward walk through visited
+// profiles (the hashchange listener restores them) instead of leaving the app.
 function personIdFromHash() {
   const match = window.location.hash.match(/^#p=(.+)$/);
   if (!match) return null;
@@ -1611,16 +1616,17 @@ function personIdFromHash() {
   }
 }
 
-function syncHash() {
+function syncHash(push = false) {
   const target = state.selectedId ? `#p=${encodeURIComponent(state.selectedId)}` : "";
   if (window.location.hash === target) return;
   const base = window.location.pathname + window.location.search;
-  history.replaceState(null, "", target || base);
+  if (push) history.pushState(null, "", target || base);
+  else history.replaceState(null, "", target || base);
 }
 
 function selectPerson(id, reroot = true, openProfile = true) {
   state.selectedId = id;
-  syncHash();
+  syncHash(true);
   state.sourcesExpanded = false;
   state.notesExpanded = false;
   if (openProfile) {
