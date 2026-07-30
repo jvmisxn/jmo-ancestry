@@ -38,7 +38,7 @@ const HELP_TIPS = [
   {
     area: "Tree",
     tips: [
-      { keys: ["Click"], does: "Open a person's profile" },
+      { keys: ["Click"], does: "Open a person's profile and keep their line to the tree focus lit" },
       { keys: ["Double-click"], does: "Make that person the tree focus" },
       { keys: ["Drag / scroll"], does: "Pan and zoom the tree (pinch on touch)" },
       { keys: ["Hover"], does: "Trace that person's connectors and their line back to the tree focus" },
@@ -1433,8 +1433,12 @@ function renderTree() {
   els.svg.append(g);
 
   const linkEls = [];
+  // The selected person's whole lineage back to the tree focus stays lit, not
+  // just the connectors touching them — the hover trace made this readable but
+  // vanished on mouse-out and never fired on touch, where tapping selects.
+  const selectedHops = lineageHops(selected.id, root.id, index);
   for (const link of links) {
-    const focused = link.people?.includes(selected.id);
+    const focused = link.people?.includes(selected.id) || linkOnLineage(link.people || [], selectedHops);
     const el = svgEl("path", {
       class: `tree-link ${link.kind || ""} ${!state.collapseCollateral && !link.direct ? "dimmed" : ""} ${focused ? "focused" : ""}`,
       d: link.d,

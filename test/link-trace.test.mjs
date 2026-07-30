@@ -79,6 +79,17 @@ check("empty hops light nothing", app.linkOnLineage(["grand", "parent"], new Set
 const spouseHops = app.lineageHops("spouse", "root", index);
 check("spouse link carries the affinal hop", app.linkOnLineage(["root", "spouse"], spouseHops), true);
 
+// Selecting a card marks its whole lineage as focused, using the same
+// predicate renderTree applies per link: touching the selected person OR
+// carrying a lineage hop. Keeps the persistent (tap-friendly) trace honest.
+const focusedLink = (people, selectedId, hopsForSelected) =>
+  people.includes(selectedId) || app.linkOnLineage(people, hopsForSelected);
+const cousinHops = app.lineageHops("cousin", "root", index);
+check("selected cousin: own drop focused", focusedLink(["aunt", "cousin"], "cousin", cousinHops), true);
+check("selected cousin: mid-lineage drop focused", focusedLink(["grand", "grand-spouse", "parent"], "cousin", cousinHops), true);
+check("selected cousin: unrelated drop not focused", focusedLink(["stranger", "spouse"], "cousin", cousinHops), false);
+check("selected focus: only touching links focused", focusedLink(["grand", "parent"], "root", app.lineageHops("root", "root", index)), false);
+
 if (failures) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
