@@ -361,6 +361,21 @@ h3 {
   gap: 10px;
 }
 
+.person-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 4px 0 -4px;
+  padding: 6px 2px 4px;
+  background: #f9f7f2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(67, 99, 124, 0.16);
+}
+
 .person-row,
 .relation-item,
 .source-item {

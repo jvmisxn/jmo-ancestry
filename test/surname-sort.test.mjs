@@ -68,6 +68,24 @@ if (JSON.stringify(browseOrder) !== JSON.stringify(expectedOrder)) {
   console.error(`browse order ${JSON.stringify(browseOrder)}, expected ${JSON.stringify(expectedOrder)}`);
 }
 
+// Directory group headers: surnameLabel mirrors the sort key's handling but
+// keeps the original casing for display.
+const labelCases = [
+  ["John Smith", "Smith"],
+  ["John Smith Jr.", "Smith"],
+  ['William "Bill" Turner', "Turner"],
+  ["Mary (Smith) Jones", "Jones"],
+  ["Madonna", "Madonna"],
+  ["", ""],
+];
+for (const [name, expected] of labelCases) {
+  const actual = app.surnameLabel(name);
+  if (actual !== expected) {
+    failures += 1;
+    console.error(`surnameLabel(${JSON.stringify(name)}) => ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`);
+  }
+}
+
 // Search haystack now includes dates, so a year query finds people.
 app.state.data = {
   people: [

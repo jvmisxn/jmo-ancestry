@@ -383,6 +383,21 @@ function surnameSortKey(name) {
   return [surname, ...words.slice(0, -1)].join(" ").toLowerCase();
 }
 
+// Display form of the surname the sort key files a person under, for the
+// directory group headers. Mirrors surnameSortKey's nickname/maiden-name/
+// suffix handling so the header always matches the grouping.
+function surnameLabel(name) {
+  const words = String(name || "")
+    .replace(/"[^"]*"|\([^)]*\)/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  while (words.length > 1 && NAME_SUFFIXES.has(words[words.length - 1].toLowerCase())) {
+    words.pop();
+  }
+  return words.length ? words[words.length - 1] : "";
+}
+
 // Rank name hits above place/note/tag hits so typing a name surfaces that
 // person first and Enter selects who the user actually typed.
 function searchRank(person, term) {
@@ -414,7 +429,32 @@ function renderPeople() {
     return;
   }
 
-  els.list.replaceChildren(...matches.map(renderPersonRow));
+  if (term) {
+    els.list.replaceChildren(...matches.map(renderPersonRow));
+    return;
+  }
+  els.list.replaceChildren(...groupedDirectoryRows(matches));
+}
+
+// Browse mode reads like a contact list: a sticky surname header before each
+// family block so scanning for "the Edwards side" doesn't mean reading every
+// card. Search results skip the headers — rank order matters more there.
+function groupedDirectoryRows(matches) {
+  const rows = [];
+  let lastKey = null;
+  for (const person of matches) {
+    const surname = surnameLabel(person.name) || "No surname";
+    const key = surname.toLowerCase();
+    if (key !== lastKey) {
+      const header = document.createElement("h3");
+      header.className = "person-group-header";
+      header.textContent = surname;
+      rows.push(header);
+      lastKey = key;
+    }
+    rows.push(renderPersonRow(person));
+  }
+  return rows;
 }
 
 function renderDetails() {
@@ -2613,6 +2653,7 @@ export const __test = {
   formatYears,
   formatEvent,
   surnameSortKey,
+  surnameLabel,
   searchMatches,
   humanizeDate,
   ancestorLaneDirection,
