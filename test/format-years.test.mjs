@@ -37,6 +37,13 @@ const cases = [
   [{ death: { date: "1954-11-30" } }, "d. 1954"],
   [{ birth: null, death: null }, ""],
   [{}, ""],
+  // Non-ISO research dates: extract the year instead of slicing "abou"/"23 M".
+  [{ birth: { date: "about 1897" }, death: { date: "23 May 1975" } }, "c. 1897–1975"],
+  [{ birth: { date: "abt 1850" } }, "b. c. 1850"],
+  [{ death: { date: "after 1900" } }, "d. aft. 1900"],
+  [{ birth: { date: "before 1832" } }, "b. bef. 1832"],
+  [{ birth: { date: "circa 1900" } }, "b. c. 1900"],
+  [{ birth: { date: "unknown" } }, ""],
 ];
 
 let failures = 0;

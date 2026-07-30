@@ -2154,9 +2154,23 @@ function parseDateParts(value) {
 
 // Year range for cards, rows, and pills. Death-only records read "d. 1954"
 // instead of a broken-looking "-1954"; full ranges use an en dash.
+// Research dates aren't always ISO ("about 1897", "23 May 1975", "after 1900"),
+// so pull the 4-digit year out of the string instead of slicing the first four
+// characters, and keep approximate qualifiers as compact prefixes.
+function yearLabel(value) {
+  const raw = String(value || "");
+  const match = raw.match(/\d{4}/);
+  if (!match) return "";
+  const year = match[0];
+  if (/\b(?:about|abt|circa|ca)\b|~/i.test(raw)) return `c. ${year}`;
+  if (/\b(?:before|bef)\b/i.test(raw)) return `bef. ${year}`;
+  if (/\b(?:after|aft)\b/i.test(raw)) return `aft. ${year}`;
+  return year;
+}
+
 function formatYears(person) {
-  const born = person.birth?.date ? person.birth.date.slice(0, 4) : "";
-  const died = person.death?.date ? person.death.date.slice(0, 4) : "";
+  const born = yearLabel(person.birth?.date);
+  const died = yearLabel(person.death?.date);
   if (born && died) return `${born}–${died}`;
   if (born) return `b. ${born}`;
   if (died) return `d. ${died}`;
