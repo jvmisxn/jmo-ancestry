@@ -2163,9 +2163,29 @@ function formatYears(person) {
   return "";
 }
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+// Turn ISO-ish record dates into readable prose: "1899-03-04" → "March 4, 1899",
+// "1899-03" → "March 1899", bare years stay as-is. Anything that isn't a plain
+// ISO date ("abt 1850", "before 1900") passes through untouched so hand-written
+// research dates keep their wording.
+function humanizeDate(value) {
+  const raw = String(value || "").trim();
+  const match = raw.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  if (!match) return raw;
+  const [, year, month, day] = match;
+  if (!month) return year;
+  const monthName = MONTH_NAMES[Number(month) - 1];
+  if (!monthName) return raw;
+  return day ? `${monthName} ${Number(day)}, ${year}` : `${monthName} ${year}`;
+}
+
 function formatEvent(event) {
   if (!event) return "";
-  return [event.date, event.place].filter(Boolean).join(" - ");
+  return [humanizeDate(event.date), event.place].filter(Boolean).join(" · ");
 }
 
 function formatMetaDate(value) {
@@ -2256,6 +2276,8 @@ export const __test = {
   kinshipLabel,
   ageAtDeath,
   formatYears,
+  formatEvent,
+  humanizeDate,
   ancestorLaneDirection,
   generationOffset,
   treeBounds,
