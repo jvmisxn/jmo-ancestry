@@ -58,6 +58,7 @@ const failures = [];
 const warnings = [];
 let laneChecks = 0;
 let revealChecks = 0;
+let spouseChecks = 0;
 
 const checkNodes = (nodes, rootId, mode) => {
   const seen = new Set();
@@ -119,6 +120,20 @@ for (const person of data.people) {
     if (link.d.includes("NaN")) {
       failures.push(`minimal root=${person.id}: link with NaN path (${link.kind})`);
     }
+    // Spouse links with another card sitting between the couple must arc over
+    // the row (curve command) instead of slicing straight through the card.
+    if (link.kind === "spouse-link") {
+      const pair = link.people.map((id) => nodes.find((node) => node.person.id === id));
+      const [a, b] = pair;
+      if (a && b && a.y === b.y) {
+        const [l, r] = a.x <= b.x ? [a, b] : [b, a];
+        const blocked = nodes.some((node) => node !== l && node !== r && node.y === l.y && node.x > l.x && node.x < r.x);
+        spouseChecks += 1;
+        if (blocked && !link.d.includes("C")) {
+          failures.push(`minimal root=${person.id}: spouse link ${link.people.join("+")} runs straight through an intervening card`);
+        }
+      }
+    }
   }
 
   // Selecting a hidden ancestor must reveal them: from a collapsed minimal
@@ -146,7 +161,7 @@ for (const person of data.people) {
   }
 }
 
-console.log(`Checked ${data.people.length} roots (${laneChecks} ancestor lane placements, ${revealChecks} ancestor reveals) in ${dataPath}`);
+console.log(`Checked ${data.people.length} roots (${laneChecks} ancestor lane placements, ${revealChecks} ancestor reveals, ${spouseChecks} spouse links) in ${dataPath}`);
 if (warnings.length) {
   console.log(`Warnings (${warnings.length} row overlaps, first 10):`);
   for (const warning of warnings.slice(0, 10)) console.log(`  - ${warning}`);

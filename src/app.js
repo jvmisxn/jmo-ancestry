@@ -1495,7 +1495,7 @@ function layoutLinks(nodes, index, directIds) {
           kind: "spouse-link",
           direct: directIds.has(left.person.id) && directIds.has(right.person.id),
           people: [left.person.id, right.person.id],
-          d: `M ${left.x + NODE_HALF_WIDTH} ${left.y} L ${right.x - NODE_HALF_WIDTH} ${right.y}`,
+          d: spouseLinkPath(left, right, nodes),
         });
       }
     }
@@ -1563,11 +1563,25 @@ function layoutLinks(nodes, index, directIds) {
         kind: "spouse-link",
         direct: directIds.has(left.person.id) && directIds.has(right.person.id),
         people: [left.person.id, right.person.id],
-        d: `M ${left.x + NODE_HALF_WIDTH} ${left.y} L ${right.x - NODE_HALF_WIDTH} ${right.y}`,
+        d: spouseLinkPath(left, right, nodes),
       });
     }
   }
   return links;
+}
+
+// A spouse link normally runs straight between the couple's card edges, but
+// collision separation and remarriages can leave other cards sitting between
+// the pair; arc those links over the row so the dashed line never slices
+// straight through an unrelated person's card.
+function spouseLinkPath(left, right, nodes) {
+  const startX = left.x + NODE_HALF_WIDTH;
+  const endX = right.x - NODE_HALF_WIDTH;
+  const blocked = left.y === right.y && nodes.some((node) => node !== left && node !== right
+    && node.y === left.y && node.x > left.x && node.x < right.x);
+  if (!blocked) return `M ${startX} ${left.y} L ${endX} ${right.y}`;
+  const topY = left.y - NODE_HALF_HEIGHT - 40;
+  return `M ${startX} ${left.y} C ${startX + 44} ${topY}, ${endX - 44} ${topY}, ${endX} ${right.y}`;
 }
 
 function directParentAnchorX(parentIds, childId, nodeById, index, directIds, fallbackX) {
