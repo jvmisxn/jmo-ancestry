@@ -494,6 +494,46 @@ dd,
   gap: 6px;
 }
 
+/* Clickable chain from the tree focus to the selected person. */
+.detail-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 4px;
+  margin: 2px 0 4px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.path-step {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 120ms ease;
+}
+
+.path-step:hover,
+.path-step:focus-visible {
+  text-decoration-color: currentColor;
+}
+
+.path-step:disabled {
+  color: var(--muted-strong);
+  cursor: default;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.path-hop {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .person-row-match {
   display: block;
   color: var(--muted);

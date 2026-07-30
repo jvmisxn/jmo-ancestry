@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JMO Ancestry</title>
-    <link rel="stylesheet" href="./src/styles.css?v=source-order-1" />
+    <link rel="stylesheet" href="./src/styles.css?v=relation-path-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -106,6 +106,7 @@
             <p class="eyebrow">Profile</p>
             <h2 id="detail-name">Select someone</h2>
             <p id="detail-context" class="section-meta">Choose a person from the tree or the people directory.</p>
+            <div id="detail-path" class="detail-path" hidden></div>
             <div id="detail-meta" class="detail-meta"></div>
             <div class="profile-actions">
               <button id="center-person" type="button">Make tree focus</button>
@@ -149,6 +150,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/app.js?v=source-order-1"></script>
+    <script type="module" src="./src/app.js?v=relation-path-1"></script>
   </body>
 </html>

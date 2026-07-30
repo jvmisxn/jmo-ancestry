@@ -51,6 +51,7 @@ const els = {
   peopleSummary: document.querySelector("#people-summary"),
   detailName: document.querySelector("#detail-name"),
   detailContext: document.querySelector("#detail-context"),
+  detailPath: document.querySelector("#detail-path"),
   detailMeta: document.querySelector("#detail-meta"),
   detailPhoto: document.querySelector("#detail-photo"),
   detailStory: document.querySelector("#detail-story"),
@@ -559,6 +560,7 @@ function renderDetails() {
       ...researchStatusPills(person),
     ].filter(Boolean),
   );
+  renderRelationPath(person, root);
   renderProfilePhoto(person);
   renderLifeStory(person);
   els.detailFacts.replaceChildren(
@@ -598,6 +600,53 @@ function renderDetails() {
       ? sourceItems
       : [emptyState("No sources attached yet.", "Add links, citations, photos, or obituary records in the JSON profile when they are ready.")],
   );
+}
+
+// Show the chain of people behind the kinship label ("2nd great-grandparent"
+// says how far; this says through whom). Each name jumps to that profile.
+// Hidden for direct parent/child/spouse, where the chain adds nothing.
+function renderRelationPath(person, root) {
+  const index = relationshipIndex();
+  const path = root && person.id !== root.id ? relationPath(person.id, root.id, index) : [];
+  if (path.length < 3) {
+    els.detailPath.hidden = true;
+    els.detailPath.replaceChildren();
+    return;
+  }
+  const parts = [];
+  path.forEach((id, position) => {
+    if (position > 0) parts.push(relationHop(path[position - 1], id, index));
+    const step = personById(id);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "path-step";
+    button.textContent = step?.name || id;
+    if (id === person.id) {
+      button.disabled = true;
+    } else {
+      button.title = `Open ${step?.name || "this profile"}`;
+      button.addEventListener("click", () => selectPerson(id, false, true));
+    }
+    parts.push(button);
+  });
+  els.detailPath.replaceChildren(...parts);
+  els.detailPath.hidden = false;
+}
+
+function relationHop(fromId, toId, index) {
+  const hop = document.createElement("span");
+  hop.className = "path-hop";
+  if (index.get(fromId)?.parents?.has(toId)) {
+    hop.textContent = "↑";
+    hop.title = "parent";
+  } else if (index.get(toId)?.parents?.has(fromId)) {
+    hop.textContent = "↓";
+    hop.title = "child";
+  } else {
+    hop.textContent = "•";
+    hop.title = "spouse";
+  }
+  return hop;
 }
 
 const NOTES_PREVIEW_LIMIT = 480;
@@ -2869,6 +2918,60 @@ function lineLabel(depth, one, two, deep, shiftOrdinal = false) {
   return count <= 1 ? deep : `${ordinal(count)} ${deep}`;
 }
 
+// The person chain behind the kinship label: focus person up to the shared
+// ancestor, then down to the selected person. Spouses bridge with one affinal
+// hop on either end, mirroring kinshipLabel. Empty when unrelated.
+function relationPath(personId, rootId, index = relationshipIndex()) {
+  if (!personId || !rootId || personId === rootId) return [];
+  const blood = bloodPath(rootId, personId, index);
+  if (blood.length) return blood;
+  if (index.get(rootId)?.spouses?.has(personId)) return [rootId, personId];
+  for (const spouseId of index.get(personId)?.spouses || []) {
+    const viaSpouse = bloodPath(rootId, spouseId, index);
+    if (viaSpouse.length) return [...viaSpouse, personId];
+  }
+  for (const spouseId of index.get(rootId)?.spouses || []) {
+    const inLaw = bloodPath(spouseId, personId, index);
+    if (inLaw.length) return [rootId, ...inLaw];
+  }
+  return [];
+}
+
+function bloodPath(aId, bId, index) {
+  const aDepths = ancestorDepths(aId, index);
+  const bDepths = ancestorDepths(bId, index);
+  let best = null;
+  for (const [ancestorId, aUp] of aDepths) {
+    const bUp = bDepths.get(ancestorId);
+    if (bUp === undefined) continue;
+    if (!best || aUp + bUp < best.aUp + best.bUp) best = { ancestorId, aUp, bUp };
+  }
+  if (!best) return [];
+  const up = chainToAncestor(aId, best.ancestorId, index);
+  const down = chainToAncestor(bId, best.ancestorId, index);
+  if (!up.length || !down.length) return [];
+  return [...up, ...down.slice(0, -1).reverse()];
+}
+
+// Shortest parent-link chain [startId, …, ancestorId], via BFS backtracking.
+function chainToAncestor(startId, ancestorId, index) {
+  const cameFrom = new Map([[startId, null]]);
+  const queue = [startId];
+  while (queue.length) {
+    const id = queue.shift();
+    if (id === ancestorId) break;
+    for (const parentId of index.get(id)?.parents || []) {
+      if (cameFrom.has(parentId)) continue;
+      cameFrom.set(parentId, id);
+      queue.push(parentId);
+    }
+  }
+  if (!cameFrom.has(ancestorId)) return [];
+  const chain = [];
+  for (let id = ancestorId; id !== null; id = cameFrom.get(id)) chain.push(id);
+  return chain.reverse();
+}
+
 function ancestorDepths(startId, index) {
   const depths = new Map([[startId, 0]]);
   const queue = [startId];
@@ -3115,6 +3218,7 @@ export const __test = {
   layoutFamilyUnits,
   orderedParentIds,
   kinshipLabel,
+  relationPath,
   renderProfilePhoto,
   ageAtDeath,
   lifeTimeline,
