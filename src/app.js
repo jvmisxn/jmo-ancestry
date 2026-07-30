@@ -14,6 +14,7 @@ const state = {
   peopleCollapsed: false,
   profileCollapsed: false,
   sourcesExpanded: false,
+  notesExpanded: false,
 };
 
 const NODE = {
@@ -392,8 +393,7 @@ function renderDetails() {
     fact("Known as", person.aliases?.join(", ")),
     fact("Tags", person.tags?.join(", ")),
   );
-  els.detailNotes.textContent = person.notes || "";
-  els.detailNotes.hidden = !person.notes;
+  renderNotes(person);
   els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
   els.centerPerson.disabled = person.id === root?.id;
 
@@ -421,6 +421,49 @@ function renderDetails() {
       ? sourceItems
       : [emptyState("No sources attached yet.", "Add links, citations, photos, or obituary records in the JSON profile when they are ready.")],
   );
+}
+
+const NOTES_PREVIEW_LIMIT = 480;
+
+// Long research notes are working logs, not prose: label them and clamp to a
+// preview so they stop reading as part of the life story.
+function renderNotes(person) {
+  const notes = String(person.notes || "").trim();
+  els.detailNotes.hidden = !notes;
+  els.detailNotes.replaceChildren();
+  if (!notes) return;
+
+  const label = document.createElement("p");
+  label.className = "notes-label";
+  label.textContent = "Research notes";
+  els.detailNotes.append(label);
+
+  const needsClamp = notes.length > NOTES_PREVIEW_LIMIT && !state.notesExpanded;
+  let shown = notes;
+  if (needsClamp) {
+    const cut = notes.lastIndexOf(" ", NOTES_PREVIEW_LIMIT);
+    shown = `${notes.slice(0, cut > NOTES_PREVIEW_LIMIT / 2 ? cut : NOTES_PREVIEW_LIMIT).trimEnd()}…`;
+  }
+
+  for (const paragraphText of splitParagraphs(shown)) {
+    const paragraph = document.createElement("p");
+    paragraph.className = "notes-body";
+    paragraph.textContent = paragraphText;
+    els.detailNotes.append(paragraph);
+  }
+
+  if (notes.length > NOTES_PREVIEW_LIMIT) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "notes-toggle";
+    toggle.textContent = state.notesExpanded ? "Show less" : "Show full notes";
+    toggle.setAttribute("aria-expanded", String(state.notesExpanded));
+    toggle.addEventListener("click", () => {
+      state.notesExpanded = !state.notesExpanded;
+      renderNotes(person);
+    });
+    els.detailNotes.append(toggle);
+  }
 }
 
 function renderProfilePhoto(person) {
@@ -1579,6 +1622,7 @@ function selectPerson(id, reroot = true, openProfile = true) {
   state.selectedId = id;
   syncHash();
   state.sourcesExpanded = false;
+  state.notesExpanded = false;
   if (openProfile) {
     state.profileCollapsed = false;
     if (isCompactViewport()) state.peopleCollapsed = true;

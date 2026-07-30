@@ -953,11 +953,44 @@ dd {
 }
 
 .notes {
+  display: grid;
+  gap: 8px;
   padding: 12px 14px;
   border: 1px dashed rgba(125, 79, 44, 0.24);
   border-radius: var(--radius);
   background: rgba(255, 252, 246, 0.58);
   line-height: 1.5;
+}
+
+.notes-label {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.notes-body {
+  margin: 0;
+}
+
+.notes-toggle {
+  justify-self: start;
+  padding: 4px 10px;
+  border: 1px solid rgba(125, 79, 44, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notes-toggle:hover,
+.notes-toggle:focus-visible {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
 }
 
 .relation-item {
