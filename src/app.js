@@ -10,6 +10,7 @@ const state = {
   collapseCollateral: true,
   expandedAncestors: new Set(),
   expandedSiblings: new Set(),
+  expandedChildren: new Set(),
   scale: 1,
   offsetX: 0,
   offsetY: 0,
@@ -222,6 +223,7 @@ function saveViewState() {
       collapseCollateral: state.collapseCollateral,
       expanded: [...state.expandedAncestors],
       siblings: [...state.expandedSiblings],
+      children: [...state.expandedChildren],
     }));
   } catch {
     // Storage may be unavailable; the view simply resets next visit.
@@ -244,6 +246,9 @@ function restoreViewState() {
   }
   if (Array.isArray(stored.siblings)) {
     state.expandedSiblings = new Set(stored.siblings.filter((id) => personById(id)));
+  }
+  if (Array.isArray(stored.children)) {
+    state.expandedChildren = new Set(stored.children.filter((id) => personById(id)));
   }
 }
 
@@ -1356,14 +1361,15 @@ function renderTree() {
     // the full-network view. The pill hangs under the card; the hide pill
     // appears once the reveal is active and everyone is on screen.
     if (state.collapseCollateral) {
+      let belowPill = null;
       const hiddenSiblings = hiddenSiblingIds(node.person.id, visibleIdSet, index);
       if (hiddenSiblings.size > 0) {
-        g.append(ancestorToggle(node, {
+        belowPill = ancestorToggle(node, {
           label: `Show sibling${hiddenSiblings.size === 1 ? "" : `s · ${hiddenSiblings.size}`}`,
           ariaLabel: `Show ${hiddenSiblings.size} hidden sibling${hiddenSiblings.size === 1 ? "" : "s"} of ${node.person.name}`,
           below: true,
           onToggle: () => expandSiblings(node.person.id),
-        }));
+        });
       } else if (
         state.expandedSiblings.has(node.person.id)
         && [...(index.get(node.person.id)?.parents || [])].some((parentId) =>
@@ -1371,14 +1377,42 @@ function renderTree() {
           && [...(index.get(parentId)?.children || [])].some((childId) =>
             childId !== node.person.id && visibleIdSet.has(childId)))
       ) {
-        g.append(ancestorToggle(node, {
+        belowPill = ancestorToggle(node, {
           label: "Hide siblings",
           ariaLabel: `Hide siblings of ${node.person.name}`,
           collapse: true,
           below: true,
           onToggle: () => collapseSiblings(node.person.id),
-        }));
+        });
       }
+
+      // Descendants expand downward the same way: grandchildren of the focus
+      // or cousins under a revealed aunt arrive one family at a time. The pill
+      // shares the below-card slot with the sibling pill (siblings win), and
+      // only shows when every child is hidden — once any child is on screen,
+      // that child's own sibling pill covers the rest of the family.
+      if (!belowPill) {
+        const childIds = [...(index.get(node.person.id)?.children || [])];
+        const anyChildVisible = childIds.some((id) => visibleIdSet.has(id));
+        const hiddenChildren = hiddenChildIds(node.person.id, visibleIdSet, index);
+        if (!anyChildVisible && hiddenChildren.size > 0) {
+          belowPill = ancestorToggle(node, {
+            label: `Show child${hiddenChildren.size === 1 ? "" : `ren · ${hiddenChildren.size}`}`,
+            ariaLabel: `Show ${hiddenChildren.size} hidden child${hiddenChildren.size === 1 ? "" : "ren"} of ${node.person.name}`,
+            below: true,
+            onToggle: () => expandChildren(node.person.id),
+          });
+        } else if (state.expandedChildren.has(node.person.id) && anyChildVisible) {
+          belowPill = ancestorToggle(node, {
+            label: "Hide children",
+            ariaLabel: `Hide children of ${node.person.name}`,
+            collapse: true,
+            below: true,
+            onToggle: () => collapseChildren(node.person.id),
+          });
+        }
+      }
+      if (belowPill) g.append(belowPill);
     }
 
     const group = svgEl("g", {
@@ -1592,6 +1626,24 @@ function expandedTreeIds(rootId, index) {
         }
       }
     }
+    // Child reveals: a visible person's hidden children join below the card,
+    // so descendants — grandchildren, cousins under a revealed aunt — expand
+    // one family at a time like ancestors do above. Each child brings their
+    // spouses and their other parent so the family unit stays whole.
+    for (const id of [...visible]) {
+      if (!state.expandedChildren.has(id)) continue;
+      for (const childId of index.get(id)?.children || []) {
+        if (!visible.has(childId)) changed = true;
+        visible.add(childId);
+        for (const relativeId of [
+          ...(index.get(childId)?.spouses || []),
+          ...(index.get(childId)?.parents || []),
+        ]) {
+          if (!visible.has(relativeId)) changed = true;
+          visible.add(relativeId);
+        }
+      }
+    }
   }
   return visible;
 }
@@ -1632,6 +1684,30 @@ function hiddenSiblingIds(personId, visible, index) {
     }
   }
   return hidden;
+}
+
+// Children still hidden behind a card in minimal mode: the person's own
+// children who are not on screen. Drives the "Show children" pill.
+function hiddenChildIds(personId, visible, index) {
+  const hidden = new Set();
+  for (const childId of index.get(personId)?.children || []) {
+    if (!visible.has(childId) && personById(childId)) hidden.add(childId);
+  }
+  return hidden;
+}
+
+function expandChildren(personId) {
+  state.expandedChildren.add(personId);
+  saveViewState();
+  fitTree();
+  render();
+}
+
+function collapseChildren(personId) {
+  state.expandedChildren.delete(personId);
+  saveViewState();
+  fitTree();
+  render();
 }
 
 function expandSiblings(personId) {
@@ -1683,6 +1759,7 @@ function collapseParents(personId) {
 function resetExpandedAncestors() {
   state.expandedAncestors = new Set();
   state.expandedSiblings = new Set();
+  state.expandedChildren = new Set();
   saveViewState();
 }
 
@@ -2515,6 +2592,17 @@ function revealAncestorPath(targetId) {
     }
   }
 
+  // A hidden child of someone on screen with no visible siblings (a cousin
+  // picked from search once the aunt is visible) reveals through the child
+  // toggle on the visible parent.
+  for (const parentId of index.get(targetId)?.parents || []) {
+    if (visible.has(parentId)) {
+      state.expandedChildren.add(parentId);
+      saveViewState();
+      return true;
+    }
+  }
+
   const queue = [...visible].map((id) => ({ id, chain: [] }));
   const seen = new Set(visible);
   while (queue.length) {
@@ -3307,6 +3395,7 @@ export const __test = {
   expandedTreeIds,
   hiddenAncestorsAbove,
   hiddenSiblingIds,
+  hiddenChildIds,
   saveViewState,
   restoreViewState,
   expandAncestorBranch,
