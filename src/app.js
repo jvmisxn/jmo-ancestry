@@ -41,7 +41,7 @@ const HELP_TIPS = [
       { keys: ["Click"], does: "Open a person's profile" },
       { keys: ["Double-click"], does: "Make that person the tree focus" },
       { keys: ["Drag / scroll"], does: "Pan and zoom the tree (pinch on touch)" },
-      { keys: ["Hover"], does: "Trace every connector line touching that person" },
+      { keys: ["Hover"], does: "Trace that person's connectors and their line back to the tree focus" },
       { keys: ["Shift", "click"], does: "On a “Show parents” pill with more generations above: reveal the whole branch at once" },
     ],
   },
@@ -1442,10 +1442,12 @@ function renderTree() {
     g.append(el);
   }
   // Hovering (or keyboard-focusing) a card lights up every connector touching
-  // that person, so a line can be traced through the web without clicking.
+  // that person, plus the chain of connectors running back to the tree focus,
+  // so a card deep in a crowded branch shows which line it hangs from.
   const setLinkTrace = (personId, on) => {
+    const hops = lineageHops(personId, root.id, index);
     for (const { el, people } of linkEls) {
-      if (people.includes(personId)) el.classList.toggle("traced", on);
+      if (people.includes(personId) || linkOnLineage(people, hops)) el.classList.toggle("traced", on);
     }
   };
 
@@ -3457,6 +3459,34 @@ function relationPath(personId, rootId, index = relationshipIndex()) {
   return [];
 }
 
+// Consecutive pairs along the relation path between a person and the tree
+// focus, keyed order-free, so hover tracing can light every connector that
+// carries one hop of the lineage. Empty for the focus itself or strangers.
+function lineageHops(personId, rootId, index = relationshipIndex()) {
+  const path = relationPath(personId, rootId, index);
+  const hops = new Set();
+  for (let i = 1; i < path.length; i += 1) hops.add(hopKey(path[i - 1], path[i]));
+  return hops;
+}
+
+function hopKey(a, b) {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+// A connector carries a lineage hop when both people of some hop ride on it.
+// Parent-child drops list both parents plus the child, so requiring the pair
+// keeps sibling drops and the couple's spouse link dark unless the path
+// actually runs through them.
+function linkOnLineage(people, hops) {
+  if (!hops.size) return false;
+  for (let i = 0; i < people.length; i += 1) {
+    for (let j = i + 1; j < people.length; j += 1) {
+      if (hops.has(hopKey(people[i], people[j]))) return true;
+    }
+  }
+  return false;
+}
+
 function bloodPath(aId, bId, index) {
   const aDepths = ancestorDepths(aId, index);
   const bDepths = ancestorDepths(bId, index);
@@ -3742,6 +3772,8 @@ export const __test = {
   orderedParentIds,
   kinshipLabel,
   relationPath,
+  lineageHops,
+  linkOnLineage,
   renderProfilePhoto,
   openPhotoLightbox,
   showLightboxPhoto,
