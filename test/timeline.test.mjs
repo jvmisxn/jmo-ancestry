@@ -45,6 +45,7 @@ app.state.data = {
         { label: "1900 United States Census", date: "1900", url: "https://example.com/census-1900" },
         { label: "Obituary", date: "1950-06-03", publication: "The Gazette" },
         { label: "Undated portrait" },
+        { label: "Find a Grave memorial", date: "1975", repository: "Find a Grave" },
       ],
     },
     { id: "spouse", name: "Spouse Example", birth: null, death: { date: "1940-02-10" }, parents: [], spouses: ["root"], children: ["kid-a", "kid-b", "kid-undated"], aliases: [], tags: [], notes: "", sources: [] },
@@ -79,12 +80,16 @@ check("event order (year + label)", events.map((e) => `${e.year} ${e.label}`), [
   "1940 Spouse Example died",
   "1950 Died",
   "1950 Obituary",
+  "1975 Find a Grave memorial",
 ]);
+check("posthumous record carries no age", events.find((e) => e.label === "Find a Grave memorial")?.detail, "Find a Grave");
 check("undated child and undated source excluded", events.some((e) => /No Dates|portrait/.test(e.label)), false);
 check("parent death before person's birth excluded", events.some((e) => e.label === "Father Example died"), false);
 check("parent-loss event carries role + age", events.find((e) => e.label === "Mother Example died")?.detail, "parent · around age 32");
 check("spouse-loss event links to the spouse", events.find((e) => e.label === "Spouse Example died")?.personId, "spouse");
 check("record keeps its link", events.find((e) => e.record)?.url, "https://example.com/census-1900");
+check("in-lifetime record carries person's age", events.find((e) => e.label === "1900 United States Census")?.detail, "around age 20");
+check("record age joins existing meta", events.find((e) => e.label === "Obituary")?.detail, "around age 70 · The Gazette");
 check("child event carries parent age + place", events.find((e) => e.label === "Ben Example born")?.detail, "around age 28 · Springfield");
 check("death detail includes age", /aged 70/.test(events.find((e) => e.label === "Died")?.detail || ""), true);
 check("obituary sorts after death in same year", events.findIndex((e) => e.label === "Obituary") > events.findIndex((e) => e.label === "Died"), true);

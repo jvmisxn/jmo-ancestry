@@ -558,12 +558,14 @@ function lifeTimeline(person, index = relationshipIndex()) {
   for (const source of profileSources(person)) {
     const year = numericYear(source.date);
     if (year === null) continue;
+    const inLifetime = birthYear !== null && year >= birthYear && (deathYear === null || year <= deathYear);
     events.push({
       year,
       rank: 3,
       record: true,
       label: source.label || source.title || source.url,
-      detail: [source.publication, source.repository].filter(Boolean).join(" · "),
+      detail: [inLifetime ? `around age ${year - birthYear}` : "", source.publication, source.repository]
+        .filter(Boolean).join(" · "),
       url: source.url || "",
     });
   }
