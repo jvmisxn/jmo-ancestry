@@ -978,25 +978,16 @@ function renderPhotoViewer(person, photos, activeIndex) {
 }
 
 function renderLifeStory(person) {
-  const obituary = primaryObituary(person);
+  const obituaries = profileObituaries(person);
   const story = person.profile?.article || person.lifeStory || person.profile?.summary || generatedLifeStory(person);
   const paragraphs = Array.isArray(story) ? story : splitParagraphs(story);
 
   els.detailStory.replaceChildren();
-  if (obituary) {
-    const badge = document.createElement(obituary.url ? "a" : "p");
-    badge.className = "story-kicker";
-    badge.textContent = obituary.publication
-      ? `Obituary available from ${obituary.publication}`
-      : "Obituary available";
-    if (obituary.url) {
-      badge.href = obituary.url;
-      badge.target = "_blank";
-      badge.rel = "noreferrer";
-      badge.title = obituary.title || "Open the obituary in a new tab";
-      badge.textContent += " ↗";
-    }
-    els.detailStory.append(badge);
+  if (obituaries.length) {
+    const row = document.createElement("div");
+    row.className = "story-kickers";
+    for (const obituary of obituaries) row.append(obituaryKicker(obituary, person));
+    els.detailStory.append(row);
   }
 
   const nameIndex = storyNameIndex();
@@ -1006,6 +997,29 @@ function renderLifeStory(person) {
     appendStoryParagraph(paragraph, paragraphText, person.id, nameIndex, closeIds);
     els.detailStory.append(paragraph);
   }
+}
+
+// Obituaries that are really about a relative say so ("Mentioned in Danny
+// Graves's obituary") instead of implying the person's own notice exists.
+function obituaryKicker(obituary, person) {
+  const badge = document.createElement(obituary.url ? "a" : "p");
+  badge.className = "story-kicker";
+  const subject = obituarySubject(obituary.title);
+  if (subject && !obituarySubjectIsPerson(subject, person.name)) {
+    badge.textContent = `Mentioned in ${subject}'s obituary`;
+  } else {
+    badge.textContent = obituary.publication
+      ? `Obituary available from ${obituary.publication}`
+      : "Obituary available";
+  }
+  if (obituary.url) {
+    badge.href = obituary.url;
+    badge.target = "_blank";
+    badge.rel = "noreferrer";
+    badge.title = obituary.title || "Open the obituary in a new tab";
+    badge.textContent += " ↗";
+  }
+  return badge;
 }
 
 // Life stories constantly name other tree people ("child of Anderson Andrew
@@ -1178,9 +1192,32 @@ function chronologicalSources(sources, person) {
     });
 }
 
-function primaryObituary(person) {
+// A profile can carry several obituary leads — the person's own notice plus
+// relatives' obituaries that mention them — so every entry becomes a badge
+// instead of only the first one surviving.
+function profileObituaries(person) {
   return [...(person.profile?.obituaries || []), ...(person.obituaries || [])]
-    .find((item) => item?.url || item?.title || item?.publication);
+    .filter((item) => item?.url || item?.title || item?.publication);
+}
+
+// The person an obituary notice is about, read from titles shaped like
+// "Danny Graves obituary, Bowling Green Daily News". Empty when the title
+// doesn't follow that shape (e.g. Find a Grave memorial leads).
+function obituarySubject(title) {
+  const match = /^(.{2,60}?)\s+obituary\b/i.exec(title || "");
+  return match ? match[1].trim() : "";
+}
+
+// Loose same-person check between an obituary subject and the profile name:
+// first and last name tokens both match, so middle names, initials, and
+// parenthesized maiden names don't break the comparison.
+function obituarySubjectIsPerson(subject, name) {
+  const tokens = (value) =>
+    (value || "").toLowerCase().replace(/[().,'"]/g, " ").split(/\s+/).filter(Boolean);
+  const a = tokens(subject);
+  const b = tokens(name);
+  if (!a.length || !b.length) return false;
+  return a[0] === b[0] && a[a.length - 1] === b[b.length - 1];
 }
 
 // Most real sources are bare label+URL pairs from a handful of archives, so a
@@ -3678,4 +3715,7 @@ export const __test = {
   adoptData,
   preservedPlace,
   importedPeopleSummary,
+  profileObituaries,
+  obituarySubject,
+  obituarySubjectIsPerson,
 };
