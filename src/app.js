@@ -947,6 +947,31 @@ function renderTree() {
     }
   };
 
+  // Arrow keys walk the tree from a focused card: Up/Down prefer an actual
+  // parent/child (nearest branch when there are several), Left/Right slide
+  // along the same generation row. Falls back to the spatially nearest card
+  // in that direction so navigation never dead-ends on layout quirks.
+  const groupById = new Map();
+  const nearestNode = (candidates, from) => candidates.reduce((best, other) => {
+    const cost = (n) => Math.abs(n.x - from.x) + Math.abs(n.y - from.y) * 2;
+    return !best || cost(other) < cost(best) ? other : best;
+  }, null);
+  const arrowTarget = (node, key) => {
+    const others = nodes.filter((other) => other !== node);
+    if (key === "ArrowLeft" || key === "ArrowRight") {
+      const dir = key === "ArrowLeft" ? -1 : 1;
+      return nearestNode(others.filter((other) =>
+        Math.abs(other.y - node.y) < NODE_HALF_HEIGHT && Math.sign(other.x - node.x) === dir), node);
+    }
+    const dir = key === "ArrowUp" ? -1 : 1;
+    const relIds = key === "ArrowUp"
+      ? index.get(node.person.id)?.parents
+      : index.get(node.person.id)?.children;
+    const relatives = others.filter((other) => relIds?.has(other.person.id));
+    if (relatives.length) return nearestNode(relatives, node);
+    return nearestNode(others.filter((other) => Math.sign(other.y - node.y) === dir), node);
+  };
+
   for (const unit of familyUnits) {
     g.append(svgEl("rect", {
       class: `family-unit ${!state.collapseCollateral && !unit.direct ? "dimmed" : ""}`,
@@ -1017,8 +1042,15 @@ function renderTree() {
         event.preventDefault();
         const reroot = event.shiftKey && node.person.id !== state.rootId;
         selectPerson(node.person.id, reroot, true);
+      } else if (event.key.startsWith("Arrow")) {
+        const target = arrowTarget(node, event.key);
+        if (target) {
+          event.preventDefault();
+          groupById.get(target.person.id)?.focus();
+        }
       }
     });
+    groupById.set(node.person.id, group);
 
     // Hovering a card answers "who is this relative to the focus person?"
     // so deep rows of similar names stop needing a profile click to identify.
