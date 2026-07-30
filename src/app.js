@@ -1887,7 +1887,11 @@ function renderPersonRow(person) {
   const isFocused = person.id === state.rootId;
   button.type = "button";
   button.className = `person-row${isSelected ? " active" : ""}${isFocused ? " focused" : ""}`;
-  button.innerHTML = `
+  button.append(personRowAvatar(person));
+
+  const body = document.createElement("span");
+  body.className = "person-row-body";
+  body.innerHTML = `
     <span class="person-row-main">
       <span class="person-row-name">${escapeHtml(person.name)}</span>
       <small class="person-row-years">${escapeHtml(formatYears(person) || "")}</small>
@@ -1904,12 +1908,32 @@ function renderPersonRow(person) {
   }
   const sourceCount = profileSources(person).length;
   if (sourceCount) flags.append(metaPill(`${sourceCount} source${sourceCount === 1 ? "" : "s"}`));
-  if (flags.childElementCount) button.append(flags);
+  if (flags.childElementCount) body.append(flags);
+  button.append(body);
 
   button.addEventListener("click", () => {
     selectPerson(person.id, false, true);
   });
   return button;
+}
+
+// Small portrait (or initials fallback) so the directory reads like the tree
+// cards and people with photos are recognizable at a glance. Broken photo
+// URLs fall back to the initials underneath.
+function personRowAvatar(person) {
+  const avatar = document.createElement("span");
+  avatar.className = "person-row-avatar";
+  avatar.textContent = initialsForName(person.name);
+  const [photo] = profilePhotos(person);
+  if (photo) {
+    const image = document.createElement("img");
+    image.src = photo.url;
+    image.alt = "";
+    image.loading = "lazy";
+    image.addEventListener("error", () => image.remove());
+    avatar.append(image);
+  }
+  return avatar;
 }
 
 function emptyState(title, copy) {
