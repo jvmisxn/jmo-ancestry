@@ -496,13 +496,15 @@ function renderNotes(person) {
   }
 }
 
-// Chronological life events for the profile: birth, children's births, dated
-// source records (censuses, obituaries), and death, sorted by year. Rank keeps
-// same-year ties sensible: birth first, then children, then death, then
-// records (so an obituary lands after "Died", a birth-year census after "Born").
+// Chronological life events for the profile: birth, children's births, deaths
+// of parents and spouses during the person's lifetime, dated source records
+// (censuses, obituaries), and death, sorted by year. Rank keeps same-year ties
+// sensible: birth first, then family events, then death, then records (so an
+// obituary lands after "Died", a birth-year census after "Born").
 function lifeTimeline(person, index = relationshipIndex()) {
   const events = [];
   const birthYear = numericYear(person.birth?.date);
+  const deathYear = numericYear(person.death?.date);
   if (birthYear !== null) {
     events.push({ year: birthYear, rank: 0, label: "Born", detail: formatEvent(person.birth) });
   }
@@ -521,7 +523,27 @@ function lifeTimeline(person, index = relationshipIndex()) {
     });
   }
 
-  const deathYear = numericYear(person.death?.date);
+  for (const { ids, role } of [
+    { ids: index.get(person.id)?.parents, role: "parent" },
+    { ids: index.get(person.id)?.spouses, role: "spouse" },
+  ]) {
+    for (const relativeId of ids || []) {
+      const relative = personById(relativeId);
+      const year = numericYear(relative?.death?.date);
+      if (year === null) continue;
+      if (birthYear !== null && year < birthYear) continue;
+      if (deathYear !== null && year > deathYear) continue;
+      const age = birthYear !== null ? year - birthYear : null;
+      events.push({
+        year,
+        rank: 1,
+        personId: relativeId,
+        label: `${relative.name} died`,
+        detail: [role, age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
+      });
+    }
+  }
+
   if (deathYear !== null) {
     const age = ageAtDeath(person);
     events.push({

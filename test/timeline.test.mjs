@@ -39,7 +39,7 @@ app.state.data = {
       name: "Ada Example",
       birth: { date: "1880-03-04", place: "Springfield" },
       death: { date: "1950-06-01", place: "Shelbyville" },
-      parents: [], spouses: ["spouse"], children: ["kid-a", "kid-b", "kid-undated"],
+      parents: ["p-mother", "p-father"], spouses: ["spouse"], children: ["kid-a", "kid-b", "kid-undated"],
       aliases: [], tags: [], notes: "",
       sources: [
         { label: "1900 United States Census", date: "1900", url: "https://example.com/census-1900" },
@@ -47,7 +47,9 @@ app.state.data = {
         { label: "Undated portrait" },
       ],
     },
-    { id: "spouse", name: "Spouse Example", birth: null, death: null, parents: [], spouses: ["root"], children: ["kid-a", "kid-b", "kid-undated"], aliases: [], tags: [], notes: "", sources: [] },
+    { id: "spouse", name: "Spouse Example", birth: null, death: { date: "1940-02-10" }, parents: [], spouses: ["root"], children: ["kid-a", "kid-b", "kid-undated"], aliases: [], tags: [], notes: "", sources: [] },
+    { id: "p-mother", name: "Mother Example", birth: null, death: { date: "1912-05-01" }, parents: [], spouses: [], children: ["root"], aliases: [], tags: [], notes: "", sources: [] },
+    { id: "p-father", name: "Father Example", birth: null, death: { date: "1875" }, parents: [], spouses: [], children: ["root"], aliases: [], tags: [], notes: "", sources: [] },
     { id: "kid-a", name: "Ada Junior", birth: { date: "abt 1905" }, death: null, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
     { id: "kid-b", name: "Ben Example", birth: { date: "1908-11-20", place: "Springfield" }, death: null, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
     { id: "kid-undated", name: "No Dates", birth: null, death: null, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
@@ -73,10 +75,15 @@ check("event order (year + label)", events.map((e) => `${e.year} ${e.label}`), [
   "1900 1900 United States Census",
   "1905 Ada Junior born",
   "1908 Ben Example born",
+  "1912 Mother Example died",
+  "1940 Spouse Example died",
   "1950 Died",
   "1950 Obituary",
 ]);
 check("undated child and undated source excluded", events.some((e) => /No Dates|portrait/.test(e.label)), false);
+check("parent death before person's birth excluded", events.some((e) => e.label === "Father Example died"), false);
+check("parent-loss event carries role + age", events.find((e) => e.label === "Mother Example died")?.detail, "parent · around age 32");
+check("spouse-loss event links to the spouse", events.find((e) => e.label === "Spouse Example died")?.personId, "spouse");
 check("record keeps its link", events.find((e) => e.record)?.url, "https://example.com/census-1900");
 check("child event carries parent age + place", events.find((e) => e.label === "Ben Example born")?.detail, "around age 28 · Springfield");
 check("death detail includes age", /aged 70/.test(events.find((e) => e.label === "Died")?.detail || ""), true);
