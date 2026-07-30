@@ -883,11 +883,113 @@ function renderLifeStory(person) {
     els.detailStory.append(badge);
   }
 
+  const nameIndex = storyNameIndex();
+  const closeIds = closeRelativeIds(person);
   for (const paragraphText of paragraphs) {
     const paragraph = document.createElement("p");
-    paragraph.textContent = paragraphText;
+    appendStoryParagraph(paragraph, paragraphText, person.id, nameIndex, closeIds);
     els.detailStory.append(paragraph);
   }
+}
+
+// Life stories constantly name other tree people ("child of Anderson Andrew
+// Graves") as plain text; these helpers turn verbatim full-name mentions into
+// links that open that relative's profile, so a story doubles as navigation.
+
+// Nicknames in quotes and maiden names in parentheses rarely appear verbatim
+// inside prose, so each person also matches under a stripped variant.
+function strippedName(name = "") {
+  return String(name)
+    .replace(/"[^"]*"/g, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Map of linkable name variant -> ids sharing it. Single-word variants stay
+// out: a bare given name matches far too much prose to link safely.
+function storyNameIndex() {
+  const map = new Map();
+  for (const person of people()) {
+    const full = String(person.name || "").replace(/\s+/g, " ").trim();
+    for (const variant of new Set([full, strippedName(full)])) {
+      if (!variant || !variant.includes(" ")) continue;
+      if (!map.has(variant)) map.set(variant, new Set());
+      map.get(variant).add(person.id);
+    }
+  }
+  return map;
+}
+
+function closeRelativeIds(person) {
+  const index = relationshipIndex();
+  const own = index.get(person.id);
+  const close = new Set([...(own?.parents || []), ...(own?.spouses || []), ...(own?.children || [])]);
+  for (const parentId of own?.parents || []) {
+    for (const siblingId of index.get(parentId)?.children || []) {
+      if (siblingId !== person.id) close.add(siblingId);
+    }
+  }
+  return close;
+}
+
+// A name shared by several people only links when exactly one candidate is a
+// close relative of the profile person — otherwise it stays plain text
+// rather than guessing which namesake was meant.
+function resolveMentionId(ids, selfId, closeIds) {
+  const candidates = [...ids].filter((id) => id !== selfId);
+  if (candidates.length === 1) return candidates[0];
+  const close = candidates.filter((id) => closeIds.has(id));
+  return close.length === 1 ? close[0] : null;
+}
+
+function isWordChar(char) {
+  return Boolean(char) && /[\p{L}\p{N}]/u.test(char);
+}
+
+// Non-overlapping name mentions in story text, earliest first; when mentions
+// overlap the longest name wins so "Mary Ann Graves" beats "Ann Graves".
+function storyMentions(text, selfId, nameIndex, closeIds) {
+  const matches = [];
+  for (const [name, ids] of nameIndex) {
+    let at = text.indexOf(name);
+    while (at !== -1) {
+      const end = at + name.length;
+      if (!isWordChar(text[at - 1]) && !isWordChar(text[end])) {
+        const id = resolveMentionId(ids, selfId, closeIds);
+        if (id) matches.push({ start: at, end, id });
+      }
+      at = text.indexOf(name, at + 1);
+    }
+  }
+  matches.sort((a, b) => a.start - b.start || b.end - a.end);
+  const kept = [];
+  let cursor = 0;
+  for (const match of matches) {
+    if (match.start < cursor) continue;
+    kept.push(match);
+    cursor = match.end;
+  }
+  return kept;
+}
+
+function appendStoryParagraph(paragraph, text, selfId, nameIndex, closeIds) {
+  let cursor = 0;
+  for (const mention of storyMentions(text, selfId, nameIndex, closeIds)) {
+    if (mention.start > cursor) paragraph.append(text.slice(cursor, mention.start));
+    const link = document.createElement("a");
+    link.className = "story-person-link";
+    link.href = `#p=${encodeURIComponent(mention.id)}`;
+    link.textContent = text.slice(mention.start, mention.end);
+    link.title = `Open ${personById(mention.id)?.name || "this person"}'s profile`;
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      selectPerson(mention.id, false, true);
+    });
+    paragraph.append(link);
+    cursor = mention.end;
+  }
+  if (cursor < text.length) paragraph.append(text.slice(cursor));
 }
 
 function generatedLifeStory(person) {
@@ -2926,6 +3028,11 @@ export const __test = {
   searchMatchReason,
   matchSnippet,
   storyText,
+  storyMentions,
+  storyNameIndex,
+  strippedName,
+  resolveMentionId,
+  closeRelativeIds,
   nextSearchMatch,
   humanizeDate,
   sourceRepositoryName,
