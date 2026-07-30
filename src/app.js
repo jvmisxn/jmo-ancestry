@@ -586,7 +586,8 @@ function renderDetails() {
       : [emptyState("No relationships recorded yet.", "Add parents, spouses, or children in the JSON when those connections are confirmed.")],
   );
 
-  const sourceItems = sources.map(renderSourceItem);
+  const sourceItems = chronologicalSources(sources, person)
+    .map(({ source, year }) => renderSourceItem(source, year));
   els.sourcesHeading.textContent = `Sources (${sourceItems.length})`;
   els.toggleSources.hidden = sourceItems.length === 0;
   els.toggleSources.textContent = `Sources${sourceItems.length ? ` (${sourceItems.length})` : ""}`;
@@ -1044,6 +1045,25 @@ function profileSources(person) {
   });
 }
 
+// The sources panel reads as a paper trail when records follow the person's
+// life: anything with a resolvable year (explicit date or a year in the label,
+// via the same sourceEventYear the timeline uses) sorts chronologically, and
+// undated leads keep their original order after the dated run.
+function chronologicalSources(sources, person) {
+  const birth = numericYear(person.birth?.date);
+  const death = numericYear(person.death?.date);
+  return sources
+    .map((source, order) => ({ source, order, year: sourceEventYear(source, birth, death) }))
+    .sort((a, b) => {
+      if (a.year === null || b.year === null) {
+        if (a.year !== b.year) return a.year === null ? 1 : -1;
+      } else if (a.year !== b.year) {
+        return a.year - b.year;
+      }
+      return a.order - b.order;
+    });
+}
+
 function primaryObituary(person) {
   return [...(person.profile?.obituaries || []), ...(person.obituaries || [])]
     .find((item) => item?.url || item?.title || item?.publication);
@@ -1090,7 +1110,7 @@ function cleanSourceLabel(label, repository) {
   return stripped || label;
 }
 
-function renderSourceItem(source) {
+function renderSourceItem(source, eventYear = null) {
   const item = document.createElement(source.url ? "a" : "div");
   item.className = `source-item ${source.type ? `source-${source.type}` : ""}`;
   if (source.url) {
@@ -1116,7 +1136,11 @@ function renderSourceItem(source) {
 
   // The repository already shows as the badge, so the meta line only carries
   // what the badge cannot: dates, publication names, and confidence notes.
-  const meta = [source.date, source.publication, source.confidence].filter(Boolean).join(" - ");
+  // A year lifted out of the label makes the panel's chronological order
+  // visible; an explicit date already carries that signal itself.
+  const meta = [source.date || eventYear, source.publication, source.confidence]
+    .filter(Boolean)
+    .join(" - ");
   if (meta) {
     const small = document.createElement("small");
     small.className = "source-meta";
@@ -3095,6 +3119,7 @@ export const __test = {
   ageAtDeath,
   lifeTimeline,
   sourceEventYear,
+  chronologicalSources,
   formatYears,
   formatEvent,
   surnameSortKey,
