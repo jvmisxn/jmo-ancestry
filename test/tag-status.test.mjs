@@ -69,7 +69,8 @@ const pills = app.researchStatusPills({
 check("one pill per tone", pills.length, 2);
 check("most urgent tone first", pills[0].className.includes("status-attention"), true);
 check("lead pill shows the first lead tag", pills[1].textContent, "Ancestry tree lead");
-check("same-tone extras land in the tooltip", pills[1].title, "Ancestry tree lead · needs direct source");
+check("same-tone extras land in the tooltip", pills[1].title,
+  'Ancestry tree lead · needs direct source — click to find everyone tagged "Ancestry tree lead"');
 check("no tags means no pills", app.researchStatusPills({ tags: ["Graves branch"] }).length, 0);
 check("missing tags array is safe", app.researchStatusPills({}).length, 0);
 

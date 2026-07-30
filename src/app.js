@@ -621,7 +621,7 @@ function renderDetails() {
     fact("Born", formatEvent(person.birth)),
     fact("Died", formatEvent(person.death)),
     fact("Known as", person.aliases?.join(", ")),
-    fact("Tags", person.tags?.filter((tag) => !tagStatusTone(tag)).join(", ")),
+    tagListFact(person),
   );
   renderTimeline(person);
   renderNotes(person);
@@ -2957,6 +2957,26 @@ function fact(label, value) {
   return fragment;
 }
 
+// Neutral branch/topic tags ("Graves branch", "Prevatt Cemetery") render as
+// clickable pills instead of a flat comma list, so a tag jumps straight to
+// everyone who shares it. Status-toned tags already show as header pills.
+function tagListFact(person) {
+  const tags = (person.tags || []).filter((tag) => tag !== "sample" && !tagStatusTone(tag));
+  const fragment = document.createDocumentFragment();
+  if (!tags.length) return fragment;
+  const dt = document.createElement("dt");
+  dt.textContent = "Tags";
+  const dd = document.createElement("dd");
+  dd.className = "fact-tags";
+  for (const tag of tags) {
+    const pill = metaPill(tag, "", () => searchByTag(tag));
+    pill.title = `Find everyone tagged "${tag}"`;
+    dd.append(pill);
+  }
+  fragment.append(dt, dd);
+  return fragment;
+}
+
 function linkGroup(label, ids = []) {
   if (!ids.length) return [];
   const heading = document.createElement("h3");
@@ -3077,11 +3097,27 @@ function empty(message) {
   return item;
 }
 
-function metaPill(label, tone = "") {
-  const pill = document.createElement("span");
-  pill.className = `meta-pill${tone ? ` ${tone}` : ""}`;
+function metaPill(label, tone = "", onClick = null) {
+  const pill = document.createElement(onClick ? "button" : "span");
+  pill.className = `meta-pill${tone ? ` ${tone}` : ""}${onClick ? " clickable" : ""}`;
   pill.textContent = label;
+  if (onClick) {
+    pill.type = "button";
+    pill.addEventListener("click", onClick);
+  }
   return pill;
+}
+
+// Clicking a tag pill drops the tag into the search box, so a branch or
+// research-status tag ("Graves branch", "needs direct source") doubles as a
+// one-click filter across the directory and the tree highlights.
+function searchByTag(tag) {
+  els.search.value = tag;
+  state.peopleCollapsed = false;
+  if (isCompactViewport()) state.profileCollapsed = true;
+  syncPanelState();
+  renderPeople();
+  renderTree();
 }
 
 // Research tags in the family data double as confidence markers ("needs
@@ -3119,8 +3155,10 @@ function researchStatusPills(person) {
     .filter((rule) => groups.has(rule.tone))
     .map((rule) => {
       const tags = groups.get(rule.tone);
-      const pill = metaPill(tags[0], rule.tone);
-      if (tags.length > 1) pill.title = tags.join(" · ");
+      const pill = metaPill(tags[0], rule.tone, () => searchByTag(tags[0]));
+      pill.title = tags.length > 1
+        ? `${tags.join(" · ")} — click to find everyone tagged "${tags[0]}"`
+        : `Find everyone tagged "${tags[0]}"`;
       return pill;
     });
 }
@@ -3534,6 +3572,9 @@ export const __test = {
   tagStatusTone,
   tagStatusRank,
   researchStatusPills,
+  metaPill,
+  tagListFact,
+  searchByTag,
   HELP_TIPS,
   renderHelpTips,
 };

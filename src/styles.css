@@ -607,6 +607,26 @@ dd,
   color: #8c3126;
 }
 
+/* Clickable tag pills are buttons that run a tag search on click. */
+.meta-pill.clickable {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease;
+}
+
+.meta-pill.clickable:hover,
+.meta-pill.clickable:focus-visible {
+  filter: brightness(0.94);
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.fact-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .empty-state {
   padding: 15px 14px;
   border: 1px dashed rgba(67, 99, 124, 0.28);
