@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JMO Ancestry</title>
-    <link rel="stylesheet" href="./src/styles.css?v=collapse-all-1" />
+    <link rel="stylesheet" href="./src/styles.css?v=help-tips-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -74,6 +74,7 @@
                 <button id="collapse-branches" type="button" title="Collapse every expanded branch back to the minimal tree" hidden>Collapse branches</button>
                 <button id="toggle-people" type="button" aria-pressed="false">People</button>
                 <button id="toggle-profile" type="button" aria-pressed="false">Profile</button>
+                <button id="tree-help" type="button" aria-haspopup="dialog" title="Tips and keyboard shortcuts (?)">Tips</button>
               </div>
             </div>
           </div>
@@ -144,6 +145,16 @@
       </aside>
     </main>
 
+    <div id="help-overlay" class="help-overlay" hidden>
+      <div class="help-card" role="dialog" aria-modal="true" aria-label="Tips and keyboard shortcuts">
+        <div class="help-head">
+          <strong>Tips &amp; shortcuts</strong>
+          <button id="help-close" type="button">Close</button>
+        </div>
+        <div id="help-body" class="help-body"></div>
+      </div>
+    </div>
+
     <div id="drop-overlay" class="drop-overlay" hidden>
       <div class="drop-overlay-card">
         <strong>Drop your family JSON to load it</strong>
@@ -151,6 +162,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/app.js?v=collapse-all-1"></script>
+    <script type="module" src="./src/app.js?v=help-tips-1"></script>
   </body>
 </html>

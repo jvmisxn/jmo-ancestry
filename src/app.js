@@ -31,6 +31,39 @@ const NODE = {
 const NODE_HALF_WIDTH = NODE.width / 2;
 const NODE_HALF_HEIGHT = NODE.height / 2;
 
+// The tree has grown a lot of invisible interactions (double-click refocus,
+// shift-click reveal-all, arrow-key walking, Enter match cycling); this list
+// feeds the Tips popover so they are discoverable without reading commits.
+const HELP_TIPS = [
+  {
+    area: "Tree",
+    tips: [
+      { keys: ["Click"], does: "Open a person's profile" },
+      { keys: ["Double-click"], does: "Make that person the tree focus" },
+      { keys: ["Drag / scroll"], does: "Pan and zoom the tree (pinch on touch)" },
+      { keys: ["Hover"], does: "Trace every connector line touching that person" },
+      { keys: ["Shift", "click"], does: "On a “Show parents” pill with more generations above: reveal the whole branch at once" },
+    ],
+  },
+  {
+    area: "Keyboard",
+    tips: [
+      { keys: ["Tab"], does: "Focus a tree card without the mouse" },
+      { keys: ["↑", "↓", "←", "→"], does: "Walk from a focused card to parents, children, and along the generation row" },
+      { keys: ["Enter"], does: "Open the focused card's profile" },
+      { keys: ["Shift", "Enter"], does: "Make the focused card the tree focus" },
+      { keys: ["?"], does: "Open or close these tips" },
+    ],
+  },
+  {
+    area: "Search",
+    tips: [
+      { keys: ["Enter"], does: "Jump to the best match; press again to cycle through the rest" },
+      { keys: ["Esc"], does: "Clear the search and restore the tree" },
+    ],
+  },
+];
+
 const els = {
   search: document.querySelector("#person-search"),
   list: document.querySelector("#person-list"),
@@ -74,6 +107,10 @@ const els = {
   toggleProfile: document.querySelector("#toggle-profile"),
   closeProfile: document.querySelector("#close-profile"),
   dropOverlay: document.querySelector("#drop-overlay"),
+  treeHelp: document.querySelector("#tree-help"),
+  helpOverlay: document.querySelector("#help-overlay"),
+  helpClose: document.querySelector("#help-close"),
+  helpBody: document.querySelector("#help-body"),
 };
 
 async function init() {
@@ -175,6 +212,7 @@ async function init() {
   els.viewport.addEventListener("wheel", onZoom, { passive: false });
   enableDrag();
   enableDropImport();
+  enableHelpOverlay();
   window.addEventListener("resize", fitTreeAfterLayout);
 
   applyDefaultPanelState();
@@ -2845,6 +2883,54 @@ function enableDropImport() {
   });
 }
 
+// Tips popover: renders HELP_TIPS lazily on first open. "?" toggles it from
+// anywhere except text inputs; Escape and a backdrop click close it.
+function enableHelpOverlay() {
+  const setOpen = (open) => {
+    if (open && !els.helpBody.childElementCount) renderHelpTips(els.helpBody);
+    els.helpOverlay.hidden = !open;
+  };
+  els.treeHelp.addEventListener("click", () => setOpen(els.helpOverlay.hidden));
+  els.helpClose.addEventListener("click", () => setOpen(false));
+  els.helpOverlay.addEventListener("click", (event) => {
+    if (event.target === els.helpOverlay) setOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    const typing = /^(input|textarea)$/i.test(event.target?.tagName || "");
+    if (event.key === "?" && !typing) {
+      event.preventDefault();
+      setOpen(els.helpOverlay.hidden);
+    } else if (event.key === "Escape" && !els.helpOverlay.hidden) {
+      setOpen(false);
+    }
+  });
+}
+
+function renderHelpTips(container) {
+  for (const group of HELP_TIPS) {
+    const heading = document.createElement("h3");
+    heading.textContent = group.area;
+    container.append(heading);
+    for (const tip of group.tips) {
+      const row = document.createElement("div");
+      row.className = "help-tip";
+      const keys = document.createElement("span");
+      keys.className = "help-keys";
+      tip.keys.forEach((key, index) => {
+        if (index > 0) keys.append(" + ");
+        const kbd = document.createElement("kbd");
+        kbd.textContent = key;
+        keys.append(kbd);
+      });
+      const does = document.createElement("span");
+      does.className = "help-does";
+      does.textContent = tip.does;
+      row.append(keys, does);
+      container.append(row);
+    }
+  }
+}
+
 function validateData(data) {
   if (!data || !Array.isArray(data.people) || data.people.length === 0) {
     throw new Error("Family JSON must include a non-empty people array.");
@@ -3448,4 +3534,6 @@ export const __test = {
   tagStatusTone,
   tagStatusRank,
   researchStatusPills,
+  HELP_TIPS,
+  renderHelpTips,
 };
