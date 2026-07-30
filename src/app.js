@@ -424,6 +424,49 @@ function searchRank(person, term) {
   return 4;
 }
 
+// Why a search result matched when the term isn't in the person's name:
+// hits inside long life stories, notes, places, or tags otherwise look like
+// mistakes in the directory. Returns the matched field plus a short excerpt
+// around the hit, or null when the name itself explains the match.
+function searchMatchReason(person, term) {
+  if (!term || person.name.toLowerCase().includes(term)) return null;
+  const alias = (person.aliases || []).find((entry) => entry.toLowerCase().includes(term));
+  if (alias) return { field: "Also known as", snippet: alias };
+  const tag = (person.tags || []).find((entry) => entry.toLowerCase().includes(term));
+  if (tag) return { field: "Tag", snippet: tag };
+  const fields = [
+    ["Birth", person.birth?.place],
+    ["Death", person.death?.place],
+    ["Birth date", person.birth?.date],
+    ["Death date", person.death?.date],
+    ["Notes", person.notes],
+    ["Life story", storyText(person)],
+  ];
+  for (const [field, text] of fields) {
+    const value = String(text || "");
+    const at = value.toLowerCase().indexOf(term);
+    if (at !== -1) return { field, snippet: matchSnippet(value, at, term.length) };
+  }
+  return null;
+}
+
+// Excerpt around a match, widened to word boundaries with ellipses on cut
+// edges, so "carpenter" reads as "…worked as a carpenter in Galesburg…".
+function matchSnippet(text, at, length, radius = 36) {
+  let start = Math.max(0, at - radius);
+  if (start > 0) {
+    const space = text.lastIndexOf(" ", start);
+    if (space !== -1) start = space + 1;
+  }
+  let end = Math.min(text.length, at + length + radius);
+  if (end < text.length) {
+    const space = text.indexOf(" ", end);
+    end = space === -1 ? text.length : space;
+  }
+  const clipped = text.slice(start, end).trim();
+  return `${start > 0 ? "…" : ""}${clipped}${end < text.length ? "…" : ""}`;
+}
+
 // Enter in the search box walks the ranked matches: the first press selects
 // the top hit and each following press advances to the next match, wrapping
 // at the end — so five same-named cousins can be stepped through one Enter at
@@ -456,7 +499,7 @@ function renderPeople() {
   }
 
   if (term) {
-    els.list.replaceChildren(...matches.map(renderPersonRow));
+    els.list.replaceChildren(...matches.map((person) => renderPersonRow(person, term)));
     return;
   }
   els.list.replaceChildren(...groupedDirectoryRows(matches));
@@ -2473,7 +2516,7 @@ function linkGroup(label, ids = []) {
   ];
 }
 
-function renderPersonRow(person) {
+function renderPersonRow(person, term = "") {
   const button = document.createElement("button");
   const isSelected = person.id === state.selectedId;
   const isFocused = person.id === state.rootId;
@@ -2490,6 +2533,15 @@ function renderPersonRow(person) {
     </span>
     <small class="person-row-meta">${escapeHtml(personListMeta(person) || "No date or place details yet.")}</small>
   `;
+
+  const reason = searchMatchReason(person, term);
+  if (reason) {
+    const matchLine = document.createElement("small");
+    matchLine.className = "person-row-match";
+    matchLine.append(`${reason.field}: `);
+    appendHighlighted(matchLine, reason.snippet, term);
+    body.append(matchLine);
+  }
 
   const flags = document.createElement("span");
   flags.className = "person-row-flags";
@@ -2800,6 +2852,23 @@ function svgText(value, x, y, className, anchor = "middle") {
   return text;
 }
 
+// Wraps every occurrence of the search term inside the snippet in <mark>,
+// built with DOM nodes so snippet text can never inject markup.
+function appendHighlighted(container, text, term) {
+  const lower = text.toLowerCase();
+  let cursor = 0;
+  let at = lower.indexOf(term);
+  while (at !== -1) {
+    if (at > cursor) container.append(text.slice(cursor, at));
+    const mark = document.createElement("mark");
+    mark.textContent = text.slice(at, at + term.length);
+    container.append(mark);
+    cursor = at + term.length;
+    at = lower.indexOf(term, cursor);
+  }
+  if (cursor < text.length) container.append(text.slice(cursor));
+}
+
 function escapeHtml(value) {
   const div = document.createElement("div");
   div.textContent = value;
@@ -2841,6 +2910,8 @@ export const __test = {
   surnameSortKey,
   surnameLabel,
   searchMatches,
+  searchMatchReason,
+  matchSnippet,
   storyText,
   nextSearchMatch,
   humanizeDate,

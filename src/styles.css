@@ -494,6 +494,24 @@ dd,
   gap: 6px;
 }
 
+.person-row-match {
+  display: block;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-row-match mark {
+  background: rgba(125, 79, 44, 0.18);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 2px;
+  font-weight: 700;
+}
+
 .person-row.active {
   border-color: rgba(47, 97, 83, 0.56);
   background: var(--green-soft);
