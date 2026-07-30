@@ -454,6 +454,27 @@ h3 {
   font-weight: 800;
 }
 
+.source-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.source-badge {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(67, 99, 124, 0.24);
+  background: rgba(67, 99, 124, 0.1);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .person-row-years,
 .relation-meta,
 .source-meta,

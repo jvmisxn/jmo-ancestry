@@ -868,6 +868,47 @@ function primaryObituary(person) {
     .find((item) => item?.url || item?.title || item?.publication);
 }
 
+// Most real sources are bare label+URL pairs from a handful of archives, so a
+// badge derived from the link's hostname carries the "where does this live"
+// signal and the label no longer needs its repetitive "Ancestry source:" prefix.
+const SOURCE_REPOSITORIES = [
+  ["ancestry.com", "Ancestry"],
+  ["ancestry.co.uk", "Ancestry"],
+  ["findagrave.com", "Find a Grave"],
+  ["familysearch.org", "FamilySearch"],
+  ["newspapers.com", "Newspapers.com"],
+  ["billiongraves.com", "BillionGraves"],
+  ["fold3.com", "Fold3"],
+  ["chroniclingamerica.loc.gov", "Chronicling America"],
+  ["archive.org", "Internet Archive"],
+  ["archives.gov", "National Archives"],
+  ["legacy.com", "Legacy.com"],
+  ["wikitree.com", "WikiTree"],
+];
+
+function sourceRepositoryName(url) {
+  if (!url) return "";
+  let host = "";
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+  // Match on domain boundaries so "example-county-archive.org" does not badge
+  // as Internet Archive.
+  const known = SOURCE_REPOSITORIES.find(([domain]) => host === domain || host.endsWith(`.${domain}`));
+  return known ? known[1] : host.replace(/^www\./, "");
+}
+
+function cleanSourceLabel(label, repository) {
+  if (!label || !repository) return label || "";
+  const stripped = label.replace(
+    new RegExp(`^${repository.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\s*(source|record|entry)?\\s*[:\\-–]\\s*`, "i"),
+    "",
+  ).trim();
+  return stripped || label;
+}
+
 function renderSourceItem(source) {
   const item = document.createElement(source.url ? "a" : "div");
   item.className = `source-item ${source.type ? `source-${source.type}` : ""}`;
@@ -877,12 +918,24 @@ function renderSourceItem(source) {
     item.rel = "noreferrer";
   }
 
+  const repository = source.repository || sourceRepositoryName(source.url);
+  const heading = document.createElement("span");
+  heading.className = "source-heading";
+  if (repository) {
+    const badge = document.createElement("span");
+    badge.className = "source-badge";
+    badge.textContent = repository;
+    heading.append(badge);
+  }
   const title = document.createElement("span");
   title.className = "source-title";
-  title.textContent = source.label || source.title || source.url;
-  item.append(title);
+  title.textContent = cleanSourceLabel(source.label || source.title, repository) || source.url;
+  heading.append(title);
+  item.append(heading);
 
-  const meta = [source.date, source.publication, source.repository, source.confidence].filter(Boolean).join(" - ");
+  // The repository already shows as the badge, so the meta line only carries
+  // what the badge cannot: dates, publication names, and confidence notes.
+  const meta = [source.date, source.publication, source.confidence].filter(Boolean).join(" - ");
   if (meta) {
     const small = document.createElement("small");
     small.className = "source-meta";
@@ -2756,6 +2809,8 @@ export const __test = {
   searchMatches,
   nextSearchMatch,
   humanizeDate,
+  sourceRepositoryName,
+  cleanSourceLabel,
   ancestorLaneDirection,
   generationOffset,
   generationRowLabel,
