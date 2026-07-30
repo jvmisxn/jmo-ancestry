@@ -535,6 +535,7 @@ function renderDetails() {
   const relationTotal = new Set([
     ...relations.parents,
     ...relations.siblings,
+    ...relations.halfSiblings,
     ...relations.spouses,
     ...relations.children,
   ]).size;
@@ -573,6 +574,7 @@ function renderDetails() {
   const relationItems = [
     ...linkGroup("Parents", relations.parents),
     ...linkGroup("Siblings", relations.siblings),
+    ...linkGroup("Half-siblings", relations.halfSiblings),
     ...linkGroup("Spouses", relations.spouses),
     ...linkGroup("Children", relations.children),
   ];
@@ -2615,13 +2617,24 @@ function metaPill(label, tone = "") {
 function profileRelations(person) {
   const index = relationshipIndex();
   const parents = orderedParentIds(person.id, index);
-  const siblings = orderedChildren(parents, index).filter((id) => id !== person.id);
+  const allSiblings = orderedChildren(parents, index).filter((id) => id !== person.id);
   return {
     parents,
-    siblings,
+    siblings: allSiblings.filter((id) => !isHalfSiblingPair(person.id, id, index)),
+    halfSiblings: allSiblings.filter((id) => isHalfSiblingPair(person.id, id, index)),
     spouses: [...(index.get(person.id)?.spouses || [])],
     children: orderedChildren([person.id], index),
   };
+}
+
+// A pair only counts as half-siblings when both people have two recorded
+// parents and exactly one is shared. With a parent missing we cannot tell
+// full from half, so the plain "sibling" label stays.
+function isHalfSiblingPair(aId, bId, index) {
+  const aParents = index.get(aId)?.parents || new Set();
+  const bParents = index.get(bId)?.parents || new Set();
+  if (aParents.size < 2 || bParents.size < 2) return false;
+  return [...aParents].filter((id) => bParents.has(id)).length === 1;
 }
 
 // The dataset has no gender field, so kinship labels stay gender-neutral
@@ -2657,7 +2670,7 @@ function bloodKinshipLabel(aId, bId, index) {
   const { aUp, bUp } = best;
   if (aUp === 0) return lineLabel(bUp, "parent", "grandparent", "great-grandparent");
   if (bUp === 0) return lineLabel(aUp, "child", "grandchild", "great-grandchild");
-  if (aUp === 1 && bUp === 1) return "sibling";
+  if (aUp === 1 && bUp === 1) return isHalfSiblingPair(aId, bId, index) ? "half-sibling" : "sibling";
   if (aUp === 1) return lineLabel(bUp - 1, "aunt or uncle", "great-aunt or great-uncle", "great-aunt or great-uncle", true);
   if (bUp === 1) return lineLabel(aUp - 1, "niece or nephew", "great-niece or great-nephew", "great-niece or great-nephew", true);
   const degree = Math.min(aUp, bUp) - 1;
