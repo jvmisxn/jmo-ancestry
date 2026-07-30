@@ -1319,8 +1319,15 @@ function renderTree() {
     group.append(hint);
     group.append(svgEl("rect", { x: -NODE_HALF_WIDTH, y: -NODE_HALF_HEIGHT, width: NODE.width, height: NODE.height, rx: 8 }));
     renderTreePortrait(group, node.person);
-    group.append(svgText(shortNodeName(node.person.name), NODE.textX, -7, "node-name"));
-    group.append(svgText(formatYears(node.person), NODE.textX, 16, "node-years"));
+    const nameLines = nodeNameLines(node.person.name);
+    if (nameLines.length === 1) {
+      group.append(svgText(nameLines[0], NODE.textX, -7, "node-name"));
+      group.append(svgText(formatYears(node.person), NODE.textX, 16, "node-years"));
+    } else {
+      group.append(svgText(nameLines[0], NODE.textX, -17, "node-name"));
+      group.append(svgText(nameLines[1], NODE.textX, -2, "node-name"));
+      group.append(svgText(formatYears(node.person), NODE.textX, 20, "node-years"));
+    }
     g.append(group);
   }
 
@@ -2941,9 +2948,30 @@ function splitParagraphs(value = "") {
     .filter(Boolean);
 }
 
-function shortNodeName(name = "") {
+// Tree cards used to chop long names to 25 characters with "…", which hit
+// exactly the names genealogy cares about ("Margaret Elizabeth (Graves)
+// Johnson"). Wrap onto a second line at the word break that best balances the
+// two halves instead; only a name too long for even two lines still truncates.
+const NODE_NAME_LINE_LIMIT = 21;
+
+function nodeNameLines(name = "") {
   const clean = String(name).replace(/\s+/g, " ").trim();
-  return clean.length > 25 ? `${clean.slice(0, 24)}...` : clean;
+  if (clean.length <= NODE_NAME_LINE_LIMIT) return [clean];
+  const words = clean.split(" ");
+  if (words.length === 1) return [truncate(clean, NODE_NAME_LINE_LIMIT)];
+  let breakIndex = 1;
+  let bestDiff = Infinity;
+  for (let i = 1; i < words.length; i += 1) {
+    const diff = Math.abs(words.slice(0, i).join(" ").length - words.slice(i).join(" ").length);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      breakIndex = i;
+    }
+  }
+  return [
+    truncate(words.slice(0, breakIndex).join(" "), NODE_NAME_LINE_LIMIT),
+    truncate(words.slice(breakIndex).join(" "), NODE_NAME_LINE_LIMIT),
+  ];
 }
 
 function truncate(value = "", limit = 72) {
@@ -3041,4 +3069,5 @@ export const __test = {
   generationOffset,
   generationRowLabel,
   treeBounds,
+  nodeNameLines,
 };
