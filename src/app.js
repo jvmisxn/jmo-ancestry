@@ -343,6 +343,16 @@ function renderWorkspaceSummary() {
   }
 }
 
+// The written life story (profile summary or article) as plain text, so
+// search can match occupations, towns, and events that only appear in the
+// narrative. Story fields may be a string or an array of paragraphs.
+function storyText(person) {
+  return [person.profile?.article, person.lifeStory, person.profile?.summary]
+    .flat()
+    .filter((part) => typeof part === "string")
+    .join(" ");
+}
+
 function searchMatches(term) {
   const matches = people().filter((person) => {
     const haystack = [
@@ -353,6 +363,7 @@ function searchMatches(term) {
       person.death?.date,
       formatYears(person),
       person.notes,
+      storyText(person),
       ...(person.aliases || []),
       ...(person.tags || []),
     ].join(" ").toLowerCase();
@@ -439,7 +450,7 @@ function renderPeople() {
 
   if (!matches.length) {
     els.list.replaceChildren(
-      emptyState("No people matched that search.", "Try another name, place, note, or tag from your family JSON."),
+      emptyState("No people matched that search.", "Try another name, place, life-story word, note, or tag from your family JSON."),
     );
     return;
   }
@@ -2830,6 +2841,7 @@ export const __test = {
   surnameSortKey,
   surnameLabel,
   searchMatches,
+  storyText,
   nextSearchMatch,
   humanizeDate,
   sourceRepositoryName,
