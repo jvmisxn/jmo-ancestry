@@ -9,6 +9,7 @@ const state = {
   rootId: null,
   collapseCollateral: true,
   expandedAncestors: new Set(),
+  expandedSiblings: new Set(),
   scale: 1,
   offsetX: 0,
   offsetY: 0,
@@ -220,6 +221,7 @@ function saveViewState() {
     localStorage.setItem(VIEW_STATE_KEY, JSON.stringify({
       collapseCollateral: state.collapseCollateral,
       expanded: [...state.expandedAncestors],
+      siblings: [...state.expandedSiblings],
     }));
   } catch {
     // Storage may be unavailable; the view simply resets next visit.
@@ -239,6 +241,9 @@ function restoreViewState() {
   }
   if (Array.isArray(stored.expanded)) {
     state.expandedAncestors = new Set(stored.expanded.filter((id) => personById(id)));
+  }
+  if (Array.isArray(stored.siblings)) {
+    state.expandedSiblings = new Set(stored.siblings.filter((id) => personById(id)));
   }
 }
 
@@ -1346,6 +1351,36 @@ function renderTree() {
       }));
     }
 
+    // Siblings expand downward from a card the same way ancestors expand
+    // upward, so aunts/uncles arrive one family at a time instead of only via
+    // the full-network view. The pill hangs under the card; the hide pill
+    // appears once the reveal is active and everyone is on screen.
+    if (state.collapseCollateral) {
+      const hiddenSiblings = hiddenSiblingIds(node.person.id, visibleIdSet, index);
+      if (hiddenSiblings.size > 0) {
+        g.append(ancestorToggle(node, {
+          label: `Show sibling${hiddenSiblings.size === 1 ? "" : `s · ${hiddenSiblings.size}`}`,
+          ariaLabel: `Show ${hiddenSiblings.size} hidden sibling${hiddenSiblings.size === 1 ? "" : "s"} of ${node.person.name}`,
+          below: true,
+          onToggle: () => expandSiblings(node.person.id),
+        }));
+      } else if (
+        state.expandedSiblings.has(node.person.id)
+        && [...(index.get(node.person.id)?.parents || [])].some((parentId) =>
+          visibleIdSet.has(parentId)
+          && [...(index.get(parentId)?.children || [])].some((childId) =>
+            childId !== node.person.id && visibleIdSet.has(childId)))
+      ) {
+        g.append(ancestorToggle(node, {
+          label: "Hide siblings",
+          ariaLabel: `Hide siblings of ${node.person.name}`,
+          collapse: true,
+          below: true,
+          onToggle: () => collapseSiblings(node.person.id),
+        }));
+      }
+    }
+
     const group = svgEl("g", {
       class: `tree-node ${node.person.id === state.rootId ? "root" : ""} ${node.person.id === state.selectedId ? "selected" : ""} ${isCollateral ? "dimmed" : ""} ${searchIds ? (searchIds.has(node.person.id) ? "search-hit" : "search-miss") : ""}`,
       transform: `translate(${node.x} ${node.y})`,
@@ -1436,10 +1471,11 @@ function generationRowLabel(generation) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function ancestorToggle(node, { label, ariaLabel, tooltip = "", onToggle, collapse = false }) {
+function ancestorToggle(node, { label, ariaLabel, tooltip = "", onToggle, collapse = false, below = false }) {
+  const pillY = below ? node.y + NODE_HALF_HEIGHT + 28 : node.y - NODE_HALF_HEIGHT - 28;
   const toggle = svgEl("g", {
     class: `ancestor-expander ${collapse ? "collapse" : ""}`,
-    transform: `translate(${node.x} ${node.y - NODE_HALF_HEIGHT - 28})`,
+    transform: `translate(${node.x} ${pillY})`,
     tabindex: "0",
     role: "button",
     "aria-label": ariaLabel,
@@ -1543,6 +1579,19 @@ function expandedTreeIds(rootId, index) {
         }
       }
     }
+    // Sibling reveals: children of a person's visible parents join the row.
+    // Gated on parent visibility so a sibling never floats in without the
+    // connecting family line.
+    for (const id of [...visible]) {
+      if (!state.expandedSiblings.has(id)) continue;
+      for (const parentId of index.get(id)?.parents || []) {
+        if (!visible.has(parentId)) continue;
+        for (const childId of index.get(parentId)?.children || []) {
+          if (!visible.has(childId)) changed = true;
+          visible.add(childId);
+        }
+      }
+    }
   }
   return visible;
 }
@@ -1570,6 +1619,33 @@ function hiddenAncestorsAbove(personId, visible, index) {
     queue.push(...(index.get(id)?.spouses || []));
   }
   return count;
+}
+
+// Siblings still hidden behind a card in minimal mode: children of the
+// person's *visible* parents who are not on screen. Drives the sibling pill.
+function hiddenSiblingIds(personId, visible, index) {
+  const hidden = new Set();
+  for (const parentId of index.get(personId)?.parents || []) {
+    if (!visible.has(parentId)) continue;
+    for (const childId of index.get(parentId)?.children || []) {
+      if (childId !== personId && !visible.has(childId) && personById(childId)) hidden.add(childId);
+    }
+  }
+  return hidden;
+}
+
+function expandSiblings(personId) {
+  state.expandedSiblings.add(personId);
+  saveViewState();
+  fitTree();
+  render();
+}
+
+function collapseSiblings(personId) {
+  state.expandedSiblings.delete(personId);
+  saveViewState();
+  fitTree();
+  render();
 }
 
 function expandParents(personId) {
@@ -1606,6 +1682,7 @@ function collapseParents(personId) {
 
 function resetExpandedAncestors() {
   state.expandedAncestors = new Set();
+  state.expandedSiblings = new Set();
   saveViewState();
 }
 
@@ -2425,6 +2502,19 @@ function revealAncestorPath(targetId) {
   const visible = expandedTreeIds(state.rootId, index);
   if (visible.has(targetId)) return false;
 
+  // A hidden sibling of someone on screen (picked from search, a story link,
+  // or profile relations) reveals through the sibling toggle: key the reveal
+  // on a visible child of the shared parent.
+  for (const parentId of index.get(targetId)?.parents || []) {
+    if (!visible.has(parentId)) continue;
+    const anchor = [...(index.get(parentId)?.children || [])].find((id) => visible.has(id));
+    if (anchor) {
+      state.expandedSiblings.add(anchor);
+      saveViewState();
+      return true;
+    }
+  }
+
   const queue = [...visible].map((id) => ({ id, chain: [] }));
   const seen = new Set(visible);
   while (queue.length) {
@@ -2436,6 +2526,14 @@ function revealAncestorPath(targetId) {
       const parentSpouses = index.get(parentId)?.spouses || new Set();
       if (parentId === targetId || parentSpouses.has(targetId)) {
         for (const link of nextChain) state.expandedAncestors.add(link);
+        saveViewState();
+        return true;
+      }
+      // A hidden aunt/uncle deeper up: expand the ancestor chain to their
+      // parent, then reveal the target as a sibling of the chain's last link.
+      if (index.get(parentId)?.children?.has(targetId)) {
+        for (const link of nextChain) state.expandedAncestors.add(link);
+        state.expandedSiblings.add(id);
         saveViewState();
         return true;
       }
@@ -3208,6 +3306,7 @@ export const __test = {
   buildBranch,
   expandedTreeIds,
   hiddenAncestorsAbove,
+  hiddenSiblingIds,
   saveViewState,
   restoreViewState,
   expandAncestorBranch,
