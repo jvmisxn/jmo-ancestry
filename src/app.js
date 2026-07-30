@@ -1067,6 +1067,36 @@ function renderTree() {
     group.append(svgText(formatYears(node.person), NODE.textX, 16, "node-years"));
     g.append(group);
   }
+
+  renderGenerationGutter(nodes, index, root, height);
+}
+
+// Pin a label for each generation row to the left edge of the viewport
+// ("Grandparents", "2nd great-grandparents", …) so deep ancestor rows stay
+// identifiable while panning through intermixed branches. Drawn outside the
+// pan/zoom group in screen space; pan and zoom re-render the tree, so the
+// labels track their rows.
+function renderGenerationGutter(nodes, index, root, height) {
+  const rows = new Map();
+  for (const node of nodes) {
+    const generation = generationOffset(root.id, node.person.id, index);
+    if (!rows.has(generation) || node.y < rows.get(generation)) rows.set(generation, node.y);
+  }
+  if (rows.size < 2) return;
+  for (const [generation, worldY] of rows) {
+    const screenY = worldY * state.scale + state.offsetY;
+    if (screenY < 18 || screenY > height - 10) continue;
+    els.svg.append(svgText(generationRowLabel(generation), 14, screenY + 4, "generation-label", "start"));
+  }
+}
+
+function generationRowLabel(generation) {
+  if (generation === 0) return "Focus generation";
+  const depth = Math.abs(generation);
+  const label = generation < 0
+    ? lineLabel(depth, "parents", "grandparents", "great-grandparents")
+    : lineLabel(depth, "children", "grandchildren", "great-grandchildren");
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function ancestorToggle(node, { label, ariaLabel, tooltip = "", onToggle, collapse = false }) {
@@ -2704,5 +2734,6 @@ export const __test = {
   humanizeDate,
   ancestorLaneDirection,
   generationOffset,
+  generationRowLabel,
   treeBounds,
 };

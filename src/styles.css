@@ -750,6 +750,18 @@ dd,
   text-transform: uppercase;
 }
 
+.generation-label {
+  fill: rgba(125, 79, 44, 0.6);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(255, 253, 248, 0.9);
+  stroke-width: 3px;
+}
+
 .overview-scale .family-label,
 .overview-scale .node-years,
 .overview-scale .node-photo,
