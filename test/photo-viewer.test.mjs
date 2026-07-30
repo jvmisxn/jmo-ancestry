@@ -30,6 +30,7 @@ const makeEl = (tag = "div") => ({
 // Memoize per selector so the test can grab the same #detail-photo element
 // that app.js captured at import time.
 const bySelector = new Map();
+const documentHandlers = {};
 globalThis.document = {
   querySelector(selector) {
     if (!bySelector.has(selector)) bySelector.set(selector, makeEl());
@@ -37,6 +38,7 @@ globalThis.document = {
   },
   createElement: (tag) => makeEl(tag),
   createElementNS: (namespace, tag) => makeEl(tag),
+  addEventListener(type, handler) { documentHandlers[type] = handler; },
   body: { classList: { toggle() {} } },
 };
 globalThis.window = { addEventListener() {}, innerWidth: 1440, location: { hash: "" } };
@@ -101,6 +103,29 @@ check("clicking second thumb swaps main image", photoBox.children[0]?.src === "h
 check("clicking second thumb updates caption", photoBox.children[1]?.textContent === "Wedding day");
 check("active state moves to second thumb", stripAfter?.children[1]?.className === "photo-thumb active"
   && stripAfter?.children[0]?.className === "photo-thumb");
+
+// --- Lightbox: clicking the main image opens full size, arrows cycle, Esc closes ---
+const lightboxEl = document.querySelector("#photo-lightbox");
+const lightboxImage = document.querySelector("#photo-lightbox-image");
+const lightboxCaption = document.querySelector("#photo-lightbox-caption");
+lightboxEl.hidden = true;
+app.enablePhotoLightbox();
+
+app.renderProfilePhoto(cora);
+check("main image is marked openable", photoBox.children[0]?.className === "photo-open"
+  && photoBox.children[0]?.attrs.role === "button");
+photoBox.children[0]?.click();
+check("clicking main image opens the lightbox", lightboxEl.hidden === false);
+check("lightbox shows the active photo", lightboxImage.src === "https://example.com/cora-1.jpg");
+check("lightbox caption includes position", lightboxCaption.textContent === "Portrait · 1 of 2");
+
+documentHandlers.keydown?.({ key: "ArrowRight", preventDefault() {} });
+check("ArrowRight cycles to the next photo", lightboxImage.src === "https://example.com/cora-2.jpg"
+  && lightboxCaption.textContent === "Wedding day · 2 of 2");
+documentHandlers.keydown?.({ key: "ArrowRight", preventDefault() {} });
+check("cycling wraps back to the first photo", lightboxImage.src === "https://example.com/cora-1.jpg");
+documentHandlers.keydown?.({ key: "Escape" });
+check("Escape closes the lightbox", lightboxEl.hidden === true);
 
 if (failures) {
   console.error(`${failures} failure(s)`);

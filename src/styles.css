@@ -1326,6 +1326,67 @@ button.timeline-label:focus-visible {
   display: none;
 }
 
+.profile-photo > img.photo-open {
+  cursor: zoom-in;
+}
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(38, 31, 26, 0.78);
+  backdrop-filter: blur(2px);
+}
+
+.photo-lightbox[hidden] {
+  display: none;
+}
+
+.photo-lightbox-card {
+  position: relative;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  max-width: min(1100px, 100%);
+}
+
+.photo-lightbox-card img {
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+  border-radius: var(--radius);
+  background: var(--workspace-strong);
+  box-shadow: var(--shadow-strong);
+}
+
+.photo-lightbox-card figcaption {
+  color: rgba(255, 251, 244, 0.92);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.photo-lightbox-card figcaption:empty {
+  display: none;
+}
+
+#photo-lightbox-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  padding: 4px 12px;
+  border: 1px solid rgba(255, 251, 244, 0.4);
+  border-radius: 999px;
+  background: rgba(38, 31, 26, 0.62);
+  color: rgba(255, 251, 244, 0.95);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
 .help-overlay {
   position: fixed;
   inset: 0;

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JMO Ancestry</title>
-    <link rel="stylesheet" href="./src/styles.css?v=obituary-badges-1" />
+    <link rel="stylesheet" href="./src/styles.css?v=photo-lightbox-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -156,6 +156,14 @@
       </div>
     </div>
 
+    <div id="photo-lightbox" class="photo-lightbox" hidden>
+      <figure class="photo-lightbox-card" role="dialog" aria-modal="true" aria-label="Photo viewer">
+        <button id="photo-lightbox-close" type="button">Close</button>
+        <img id="photo-lightbox-image" alt="" />
+        <figcaption id="photo-lightbox-caption"></figcaption>
+      </figure>
+    </div>
+
     <div id="drop-overlay" class="drop-overlay" hidden>
       <div class="drop-overlay-card">
         <strong>Drop your family JSON to load it</strong>
@@ -163,6 +171,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/app.js?v=obituary-badges-1"></script>
+    <script type="module" src="./src/app.js?v=photo-lightbox-1"></script>
   </body>
 </html>

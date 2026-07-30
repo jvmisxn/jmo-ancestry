@@ -56,6 +56,12 @@ const HELP_TIPS = [
     ],
   },
   {
+    area: "Profile",
+    tips: [
+      { keys: ["Click photo"], does: "View it full size; ← → cycle a multi-photo profile, Esc closes" },
+    ],
+  },
+  {
     area: "Search",
     tips: [
       { keys: ["Enter"], does: "Jump to the best match; press again to cycle through the rest" },
@@ -112,6 +118,10 @@ const els = {
   helpOverlay: document.querySelector("#help-overlay"),
   helpClose: document.querySelector("#help-close"),
   helpBody: document.querySelector("#help-body"),
+  photoLightbox: document.querySelector("#photo-lightbox"),
+  photoLightboxImage: document.querySelector("#photo-lightbox-image"),
+  photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
+  photoLightboxClose: document.querySelector("#photo-lightbox-close"),
 };
 
 async function init() {
@@ -218,6 +228,7 @@ async function init() {
   enableDrag();
   enableDropImport();
   enableHelpOverlay();
+  enablePhotoLightbox();
   window.addEventListener("resize", fitTreeAfterLayout);
 
   applyDefaultPanelState();
@@ -945,6 +956,16 @@ function renderPhotoViewer(person, photos, activeIndex) {
   image.src = photo.url;
   image.alt = photo.alt || `Photo of ${person.name}`;
   image.loading = "lazy";
+  image.className = "photo-open";
+  image.title = "View full size";
+  image.tabIndex = 0;
+  image.setAttribute("role", "button");
+  image.addEventListener("click", () => openPhotoLightbox(person, photos, activeIndex));
+  image.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openPhotoLightbox(person, photos, activeIndex);
+  });
   els.detailPhoto.append(image);
 
   const captionText = [photo.caption, photo.credit].filter(Boolean).join(" - ");
@@ -975,6 +996,51 @@ function renderPhotoViewer(person, photos, activeIndex) {
     strip.append(pick);
   });
   els.detailPhoto.append(strip);
+}
+
+// Full-size photo lightbox: opened by clicking the main profile image. The
+// small viewer crops with object-fit, so tall portraits and wide group shots
+// were never fully visible before. Left/Right cycle a multi-photo profile;
+// Escape or a backdrop click closes.
+const lightbox = { photos: [], index: 0, name: "" };
+
+function openPhotoLightbox(person, photos, index) {
+  lightbox.photos = photos;
+  lightbox.name = person.name;
+  showLightboxPhoto(index);
+  els.photoLightbox.hidden = false;
+  els.photoLightboxClose.focus?.();
+}
+
+function showLightboxPhoto(index) {
+  const count = lightbox.photos.length;
+  if (!count) return;
+  lightbox.index = ((index % count) + count) % count;
+  const photo = lightbox.photos[lightbox.index];
+  els.photoLightboxImage.src = photo.url;
+  els.photoLightboxImage.alt = photo.alt || `Photo of ${lightbox.name}`;
+  const caption = [photo.caption, photo.credit].filter(Boolean).join(" - ");
+  const position = count > 1 ? `${lightbox.index + 1} of ${count}` : "";
+  els.photoLightboxCaption.textContent = [caption, position].filter(Boolean).join(" · ");
+}
+
+function enablePhotoLightbox() {
+  const close = () => {
+    els.photoLightbox.hidden = true;
+  };
+  els.photoLightboxClose.addEventListener("click", close);
+  els.photoLightbox.addEventListener("click", (event) => {
+    if (event.target === els.photoLightbox) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (els.photoLightbox.hidden) return;
+    if (event.key === "Escape") {
+      close();
+    } else if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && lightbox.photos.length > 1) {
+      event.preventDefault();
+      showLightboxPhoto(lightbox.index + (event.key === "ArrowRight" ? 1 : -1));
+    }
+  });
 }
 
 function renderLifeStory(person) {
@@ -3677,6 +3743,10 @@ export const __test = {
   kinshipLabel,
   relationPath,
   renderProfilePhoto,
+  openPhotoLightbox,
+  showLightboxPhoto,
+  enablePhotoLightbox,
+  lightbox,
   ageAtDeath,
   lifeTimeline,
   sourceEventYear,
