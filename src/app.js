@@ -645,7 +645,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
   }
 
   for (const source of profileSources(person)) {
-    const year = numericYear(source.date);
+    const year = sourceEventYear(source, birthYear, deathYear);
     if (year === null) continue;
     const inLifetime = birthYear !== null && year >= birthYear && (deathYear === null || year <= deathYear);
     events.push({
@@ -665,6 +665,28 @@ function lifeTimeline(person, index = relationshipIndex()) {
 function numericYear(value) {
   const match = String(value || "").match(/\d{4}/);
   return match ? Number(match[0]) : null;
+}
+
+// Real-data sources are mostly bare label+URL pairs with no date field, yet
+// the labels usually name the event year ("1950 U.S. census, Allen County").
+// When no explicit date exists, pull a year out of the label — skipping years
+// that are part of a collection span ("Marriage Records, 1780-2002") and only
+// trusting a year inside the person's known lifetime (death year + 1 keeps
+// obituaries) so research/access dates like "read Jul 2026" stay out.
+function sourceEventYear(source, birthYear, deathYear) {
+  const explicit = numericYear(source.date);
+  if (explicit !== null) return explicit;
+  if (birthYear === null) return null;
+  const maxYear = deathYear !== null ? deathYear + 1 : birthYear + 110;
+  const label = String(source.label || source.title || "");
+  for (const match of label.matchAll(/\b(1[6-9]\d{2}|20\d{2})\b/g)) {
+    const before = label[match.index - 1] || "";
+    const after = label[match.index + match[1].length] || "";
+    if (before === "-" || before === "–" || after === "-" || after === "–") continue;
+    const year = Number(match[1]);
+    if (year >= birthYear && year <= maxYear) return year;
+  }
+  return null;
 }
 
 // The timeline only earns its space when it adds something beyond the
@@ -2802,6 +2824,7 @@ export const __test = {
   renderProfilePhoto,
   ageAtDeath,
   lifeTimeline,
+  sourceEventYear,
   formatYears,
   formatEvent,
   surnameSortKey,
