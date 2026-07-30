@@ -312,13 +312,19 @@ async function forgetStoredData() {
   renderDataStatus("Saved family data removed from this browser. Sample data loaded.", "success");
 }
 
-function adoptData(data) {
+function adoptData(data, place = null) {
   state.data = data;
-  state.selectedId = data.meta?.defaultPersonId || data.people[0]?.id;
-  state.rootId = state.selectedId;
+  state.selectedId = place?.selectedId || data.meta?.defaultPersonId || data.people[0]?.id;
+  state.rootId = place?.rootId || state.selectedId;
   syncHash();
-  state.collapseCollateral = true;
+  state.collapseCollateral = place ? place.collapseCollateral : true;
   resetExpandedAncestors();
+  if (place) {
+    state.expandedAncestors = new Set(place.expandedAncestors);
+    state.expandedSiblings = new Set(place.expandedSiblings);
+    state.expandedChildren = new Set(place.expandedChildren);
+    saveViewState();
+  }
   applyDefaultPanelState();
   syncPanelState();
   els.search.value = "";
@@ -2869,17 +2875,60 @@ async function importData(event) {
   event.target.value = "";
 }
 
+// Re-importing an updated export is routine (every research pass rewrites
+// family.json), so resetting the selection, tree focus, and branch reveals
+// on each import made iterating painful. Keep the user's place when the
+// selected person still exists in the new data; ids that vanished drop out.
+function preservedPlace(prior, data) {
+  if (!prior) return null;
+  const ids = new Set(data.people.map((person) => person.id));
+  if (!ids.has(prior.selectedId)) return null;
+  return {
+    selectedId: prior.selectedId,
+    rootId: ids.has(prior.rootId) ? prior.rootId : prior.selectedId,
+    collapseCollateral: prior.collapseCollateral,
+    expandedAncestors: [...prior.expandedAncestors].filter((id) => ids.has(id)),
+    expandedSiblings: [...prior.expandedSiblings].filter((id) => ids.has(id)),
+    expandedChildren: [...prior.expandedChildren].filter((id) => ids.has(id)),
+  };
+}
+
+// "228 people" alone never says whether an import actually brought anything
+// new. When the file updates the dataset already loaded (some ids overlap),
+// name up to three newcomers; an unrelated dataset just reports its total.
+function importedPeopleSummary(data, priorIds) {
+  const total = `${data.people.length} people`;
+  if (!priorIds || !data.people.some((person) => priorIds.has(person.id))) return total;
+  const added = data.people.filter((person) => !priorIds.has(person.id));
+  if (!added.length) return `${total} (no new people)`;
+  const names = added.slice(0, 3).map((person) => strippedName(person.name));
+  const extra = added.length > names.length ? `, +${added.length - names.length} more` : "";
+  return `${total} (${added.length} new: ${names.join(", ")}${extra})`;
+}
+
 async function loadFamilyFile(file) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
     validateData(data);
+    const prior = state.data
+      ? {
+          selectedId: state.selectedId,
+          rootId: state.rootId,
+          collapseCollateral: state.collapseCollateral,
+          expandedAncestors: state.expandedAncestors,
+          expandedSiblings: state.expandedSiblings,
+          expandedChildren: state.expandedChildren,
+        }
+      : null;
+    const priorIds = state.data ? new Set(state.data.people.map((person) => person.id)) : null;
     state.hasStoredData = storeData(data);
-    adoptData(data);
+    adoptData(data, preservedPlace(prior, data));
+    const summary = importedPeopleSummary(data, priorIds);
     renderDataStatus(
       state.hasStoredData
-        ? `Loaded ${data.people.length} people from ${file.name}. Saved in this browser only; nothing is uploaded.`
-        : `Loaded ${data.people.length} people from ${file.name}. Could not save in this browser, so re-import next visit. Nothing was uploaded.`,
+        ? `Loaded ${summary} from ${file.name}. Saved in this browser only; nothing is uploaded.`
+        : `Loaded ${summary} from ${file.name}. Could not save in this browser, so re-import next visit. Nothing was uploaded.`,
       "success",
     );
   } catch (error) {
@@ -3626,4 +3675,7 @@ export const __test = {
   HELP_TIPS,
   renderHelpTips,
   personLink,
+  adoptData,
+  preservedPlace,
+  importedPeopleSummary,
 };
