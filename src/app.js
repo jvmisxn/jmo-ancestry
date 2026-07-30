@@ -669,10 +669,10 @@ function renderTimeline(person) {
 }
 
 function renderProfilePhoto(person) {
-  const [photo] = profilePhotos(person);
-  els.detailPhoto.replaceChildren();
+  const photos = profilePhotos(person);
   els.detailPhoto.hidden = false;
-  if (!photo) {
+  if (!photos.length) {
+    els.detailPhoto.replaceChildren();
     const placeholder = document.createElement("div");
     placeholder.className = "photo-placeholder";
     placeholder.textContent = initialsForName(person.name);
@@ -683,6 +683,14 @@ function renderProfilePhoto(person) {
     els.detailPhoto.append(caption);
     return;
   }
+  renderPhotoViewer(person, photos, 0);
+}
+
+// When a profile has more than one attached photo, the extras render as a
+// thumbnail strip under the main image; clicking a thumbnail swaps it in.
+function renderPhotoViewer(person, photos, activeIndex) {
+  const photo = photos[activeIndex];
+  els.detailPhoto.replaceChildren();
 
   const image = document.createElement("img");
   image.src = photo.url;
@@ -696,6 +704,28 @@ function renderProfilePhoto(person) {
     caption.textContent = captionText;
     els.detailPhoto.append(caption);
   }
+
+  if (photos.length < 2) return;
+  const strip = document.createElement("div");
+  strip.className = "photo-thumbs";
+  photos.forEach((thumb, index) => {
+    const pick = document.createElement("button");
+    pick.type = "button";
+    pick.className = `photo-thumb${index === activeIndex ? " active" : ""}`;
+    pick.title = thumb.caption || `Photo ${index + 1} of ${photos.length}`;
+    pick.setAttribute("aria-label", pick.title);
+    pick.setAttribute("aria-pressed", String(index === activeIndex));
+    const small = document.createElement("img");
+    small.src = thumb.url;
+    small.alt = "";
+    small.loading = "lazy";
+    pick.append(small);
+    pick.addEventListener("click", () => {
+      if (index !== activeIndex) renderPhotoViewer(person, photos, index);
+    });
+    strip.append(pick);
+  });
+  els.detailPhoto.append(strip);
 }
 
 function renderLifeStory(person) {
@@ -2577,6 +2607,7 @@ export const __test = {
   layoutFamilyUnits,
   orderedParentIds,
   kinshipLabel,
+  renderProfilePhoto,
   ageAtDeath,
   lifeTimeline,
   formatYears,

@@ -901,6 +901,35 @@ dd,
   line-height: 1.45;
 }
 
+.photo-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.photo-thumb {
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.photo-thumb.active {
+  border-color: rgba(47, 97, 83, 0.66);
+  cursor: default;
+}
+
+.photo-thumb img {
+  width: 56px;
+  height: 56px;
+  min-height: 0;
+  max-height: none;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
 .life-story {
   display: grid;
   gap: 12px;
