@@ -103,6 +103,7 @@ const els = {
   dataStatus: document.querySelector("#data-status"),
   centerPerson: document.querySelector("#center-person"),
   homePerson: document.querySelector("#home-person"),
+  copyLink: document.querySelector("#copy-link"),
   togglePeople: document.querySelector("#toggle-people"),
   toggleProfile: document.querySelector("#toggle-profile"),
   closeProfile: document.querySelector("#close-profile"),
@@ -188,6 +189,10 @@ async function init() {
     resetExpandedAncestors();
     fitTree();
     render();
+  });
+  els.copyLink.addEventListener("click", async () => {
+    if (!state.selectedId) return;
+    showCopyLinkFeedback(await copyText(personLink(state.selectedId)));
   });
   els.togglePeople.addEventListener("click", () => {
     state.peopleCollapsed = !state.peopleCollapsed;
@@ -2595,6 +2600,49 @@ function syncHash(push = false) {
   else history.replaceState(null, "", target || base);
 }
 
+// A profile deep link is just the app URL with the #p= hash the router above
+// already restores, so pasting it in another browser (with the same family
+// JSON loaded) reopens this exact person.
+function personLink(id, base = window.location.origin + window.location.pathname + window.location.search) {
+  return `${base}#p=${encodeURIComponent(id)}`;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // The Clipboard API needs a secure context; GitHub Pages qualifies, but a
+    // file:// or LAN-http open of the app does not, so fall back to the
+    // selection-based copy that still works there.
+    try {
+      const scratch = document.createElement("textarea");
+      scratch.value = text;
+      scratch.setAttribute("readonly", "");
+      scratch.style.position = "fixed";
+      scratch.style.opacity = "0";
+      document.body.append(scratch);
+      scratch.select();
+      const copied = document.execCommand("copy");
+      scratch.remove();
+      return copied;
+    } catch {
+      return false;
+    }
+  }
+}
+
+let copyLinkFeedbackTimer = null;
+function showCopyLinkFeedback(copied) {
+  els.copyLink.textContent = copied ? "Link copied" : "Copy failed";
+  els.copyLink.classList.toggle("copy-failed", !copied);
+  clearTimeout(copyLinkFeedbackTimer);
+  copyLinkFeedbackTimer = setTimeout(() => {
+    els.copyLink.textContent = "Copy link";
+    els.copyLink.classList.remove("copy-failed");
+  }, 1600);
+}
+
 function selectPerson(id, reroot = true, openProfile = true) {
   state.selectedId = id;
   syncHash(true);
@@ -3577,4 +3625,5 @@ export const __test = {
   searchByTag,
   HELP_TIPS,
   renderHelpTips,
+  personLink,
 };

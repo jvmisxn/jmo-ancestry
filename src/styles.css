@@ -1030,6 +1030,12 @@ dd,
   gap: 8px;
 }
 
+#copy-link.copy-failed {
+  border-color: rgba(125, 79, 44, 0.42);
+  background: rgba(249, 233, 223, 0.92);
+  color: var(--accent-strong);
+}
+
 .profile-actions button:first-child {
   border-color: rgba(125, 79, 44, 0.42);
   background: var(--accent-soft);
