@@ -297,8 +297,8 @@ function renderWorkspaceSummary() {
   els.workspaceTitle.textContent = meta.title || "Family tree";
   els.workspaceMeta.textContent = formatMetaDate(meta.updated) || `${people().length} people`;
   els.treeSubtitle.textContent = state.collapseCollateral
-    ? "Minimal tree view with manual ancestor reveals."
-    : "Full connected family network around the current tree focus.";
+    ? "Minimal tree view with manual ancestor reveals. Double-click a card to refocus."
+    : "Full connected family network around the current tree focus. Double-click a card to refocus.";
   if (!els.search.value.trim()) {
     els.peopleSummary.textContent = defaultPeopleSummary();
   }
@@ -723,22 +723,28 @@ function renderTree() {
       event.stopPropagation();
     });
     group.addEventListener("click", () => selectPerson(node.person.id, false, true));
+    // Double-click (or Shift+Enter) refocuses the tree on that person directly,
+    // skipping the select-then-"Make tree focus" round trip through the profile.
+    group.addEventListener("dblclick", (event) => {
+      event.stopPropagation();
+      if (node.person.id !== state.rootId) selectPerson(node.person.id, true, true);
+    });
     group.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        selectPerson(node.person.id, false, true);
+        const reroot = event.shiftKey && node.person.id !== state.rootId;
+        selectPerson(node.person.id, reroot, true);
       }
     });
 
+    const hint = svgEl("title", {});
+    hint.textContent = node.person.id === state.rootId
+      ? node.person.name
+      : `${node.person.name} — double-click to make tree focus`;
+    group.append(hint);
     group.append(svgEl("rect", { x: -NODE_HALF_WIDTH, y: -NODE_HALF_HEIGHT, width: NODE.width, height: NODE.height, rx: 8 }));
     renderTreePortrait(group, node.person);
-    const name = svgText(shortNodeName(node.person.name), NODE.textX, -7, "node-name");
-    if (node.person.name.length > shortNodeName(node.person.name).length) {
-      const title = svgEl("title", {});
-      title.textContent = node.person.name;
-      name.append(title);
-    }
-    group.append(name);
+    group.append(svgText(shortNodeName(node.person.name), NODE.textX, -7, "node-name"));
     group.append(svgText(formatYears(node.person), NODE.textX, 16, "node-years"));
     g.append(group);
   }
