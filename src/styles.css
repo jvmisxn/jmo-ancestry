@@ -841,6 +841,20 @@ dd,
   filter: none;
 }
 
+.tree-node.search-miss {
+  opacity: 0.22;
+}
+
+.tree-node.search-miss rect {
+  filter: none;
+}
+
+.tree-node.search-hit rect {
+  fill: var(--blue-soft);
+  stroke: var(--blue);
+  stroke-width: 2.6;
+}
+
 .tree-node.selected rect {
   fill: var(--green-soft);
   stroke: var(--green);

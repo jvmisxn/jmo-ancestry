@@ -97,7 +97,10 @@ async function init() {
     if (id && id !== state.selectedId) selectPerson(id, false, true);
   });
 
-  els.search.addEventListener("input", renderPeople);
+  els.search.addEventListener("input", () => {
+    renderPeople();
+    renderTree();
+  });
   els.search.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       const term = els.search.value.trim().toLowerCase();
@@ -108,6 +111,7 @@ async function init() {
       event.stopPropagation();
       els.search.value = "";
       renderPeople();
+      renderTree();
     }
   });
   els.loadJson.addEventListener("click", () => els.importJson.click());
@@ -895,6 +899,10 @@ function renderTree() {
   const graph = buildBranch(root.id, index, visibleIds);
   const nodes = layoutNodes(graph, index);
   const visibleIdSet = new Set(nodes.map((node) => node.person.id));
+  // While a search is typed, matching cards light up and everyone else fades,
+  // so a person can be spotted inside a crowded branch without leaving the tree.
+  const searchTerm = els.search.value.trim().toLowerCase();
+  const searchIds = searchTerm ? new Set(searchMatches(searchTerm).map((match) => match.id)) : null;
   const familyUnits = layoutFamilyUnits(nodes, index, directIds);
   const links = layoutLinks(nodes, index, directIds);
   const width = Math.max(els.viewport.clientWidth, 360);
@@ -913,9 +921,13 @@ function renderTree() {
     : selectedKinship
       ? `${root.name}'s ${selectedKinship}.`
       : `Selected profile while tree focus stays on ${root.name}.`;
-  els.count.textContent = state.collapseCollateral
+  const baseCount = state.collapseCollateral
     ? `${nodes.length} visible people, ${visibleParents} ancestors shown, ${hiddenParentCount} hidden`
     : `${directCount} direct line, ${collateralCount} collateral`;
+  const searchHitCount = searchIds ? nodes.filter((node) => searchIds.has(node.person.id)).length : 0;
+  els.count.textContent = searchIds
+    ? `${baseCount} · ${searchHitCount} of ${searchIds.size} match${searchIds.size === 1 ? "" : "es"} in view`
+    : baseCount;
   els.focusDirect.textContent = state.collapseCollateral ? "Show full tree" : "Minimal tree";
   els.focusDirect.title = state.collapseCollateral
     ? "Show every connected relative around this family"
@@ -1017,7 +1029,7 @@ function renderTree() {
     }
 
     const group = svgEl("g", {
-      class: `tree-node ${node.person.id === state.rootId ? "root" : ""} ${node.person.id === state.selectedId ? "selected" : ""} ${isCollateral ? "dimmed" : ""}`,
+      class: `tree-node ${node.person.id === state.rootId ? "root" : ""} ${node.person.id === state.selectedId ? "selected" : ""} ${isCollateral ? "dimmed" : ""} ${searchIds ? (searchIds.has(node.person.id) ? "search-hit" : "search-miss") : ""}`,
       transform: `translate(${node.x} ${node.y})`,
       tabindex: "0",
       role: "button",
