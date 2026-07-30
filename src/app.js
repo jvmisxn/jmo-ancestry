@@ -310,17 +310,42 @@ function searchMatches(term) {
       person.name,
       person.birth?.place,
       person.death?.place,
+      person.birth?.date,
+      person.death?.date,
+      formatYears(person),
       person.notes,
       ...(person.aliases || []),
       ...(person.tags || []),
     ].join(" ").toLowerCase();
     return !term || haystack.includes(term);
   });
-  if (!term) return matches.sort((a, b) => a.name.localeCompare(b.name));
+  if (!term) {
+    return matches.sort((a, b) =>
+      surnameSortKey(a.name).localeCompare(surnameSortKey(b.name)) || a.name.localeCompare(b.name));
+  }
   return matches
     .map((person) => ({ person, rank: searchRank(person, term) }))
     .sort((a, b) => a.rank - b.rank || a.person.name.localeCompare(b.person.name))
     .map((entry) => entry.person);
+}
+
+// Directory browse order groups families together: sort by surname, then the
+// rest of the name. Nicknames in quotes, maiden names in parentheses, and
+// generational suffixes (Jr., III) never count as the surname.
+const NAME_SUFFIXES = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv", "v"]);
+
+function surnameSortKey(name) {
+  const words = String(name || "")
+    .replace(/"[^"]*"|\([^)]*\)/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  while (words.length > 1 && NAME_SUFFIXES.has(words[words.length - 1].toLowerCase())) {
+    words.pop();
+  }
+  if (!words.length) return "";
+  const surname = words[words.length - 1];
+  return [surname, ...words.slice(0, -1)].join(" ").toLowerCase();
 }
 
 // Rank name hits above place/note/tag hits so typing a name surfaces that
@@ -2370,6 +2395,8 @@ export const __test = {
   ageAtDeath,
   formatYears,
   formatEvent,
+  surnameSortKey,
+  searchMatches,
   humanizeDate,
   ancestorLaneDirection,
   generationOffset,
