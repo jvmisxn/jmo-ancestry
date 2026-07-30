@@ -1039,6 +1039,37 @@ function applyProgressiveAncestorLanes(nodes, index) {
   for (const rowNodes of rows.values()) {
     placePathlessAncestorSpouses(rowNodes, rootNode, index, minGap);
   }
+  separateAncestorRows(nodes, rootNode, index, minGap);
+}
+
+// Slot math can land two ancestor branches on overlapping columns (pedigree
+// collapse, remarriages, uneven branch depth). Final pass: walk each visual
+// row and push colliding cards outward — leftward on the father side,
+// rightward on the mother side — so cards never stack while every branch
+// stays on its own side of the root.
+function separateAncestorRows(nodes, rootNode, index, minGap) {
+  const rowsByY = new Map();
+  for (const node of nodes) {
+    if (generationOffset(state.rootId, node.person.id, index) >= 0) continue;
+    if (!rowsByY.has(node.y)) rowsByY.set(node.y, []);
+    rowsByY.get(node.y).push(node);
+  }
+
+  for (const rowNodes of rowsByY.values()) {
+    const sorted = [...rowNodes].sort((a, b) => a.x - b.x);
+    const left = sorted.filter((node) => node.x < rootNode.x).reverse();
+    const right = sorted.filter((node) => node.x >= rootNode.x);
+
+    for (let i = 1; i < left.length; i += 1) {
+      if (left[i].x > left[i - 1].x - minGap) left[i].x = left[i - 1].x - minGap;
+    }
+    if (left.length && right.length && right[0].x - left[0].x < minGap) {
+      right[0].x = left[0].x + minGap;
+    }
+    for (let i = 1; i < right.length; i += 1) {
+      if (right[i].x < right[i - 1].x + minGap) right[i].x = right[i - 1].x + minGap;
+    }
+  }
 }
 
 function placePathlessAncestorSpouses(rowNodes, rootNode, index, minGap) {
