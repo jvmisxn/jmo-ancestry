@@ -1,4 +1,5 @@
 const STORAGE_KEY = "jmo-ancestry-family-data";
+const VIEW_STATE_KEY = "jmo-ancestry-view-state";
 const COMPACT_BREAKPOINT = 1180;
 
 const state = {
@@ -89,6 +90,7 @@ async function init() {
   // Anchor the starting person in the URL (no history entry) so the first
   // Back press after browsing returns here instead of doing nothing.
   syncHash();
+  restoreViewState();
 
   window.addEventListener("hashchange", () => {
     const id = personIdFromHash();
@@ -117,6 +119,7 @@ async function init() {
       state.rootId = state.selectedId;
       resetExpandedAncestors();
     }
+    saveViewState();
     fitTree();
     render();
   });
@@ -200,6 +203,37 @@ function storeData(data) {
     return true;
   } catch {
     return false;
+  }
+}
+
+// Reloading used to collapse every ancestor branch back to the minimal view,
+// so a long expansion session had to be rebuilt pill by pill. Persist the
+// reveal set (plus minimal/full mode) and restore it on load; ids that are
+// not in the current dataset are dropped rather than kept as dead weight.
+function saveViewState() {
+  try {
+    localStorage.setItem(VIEW_STATE_KEY, JSON.stringify({
+      collapseCollateral: state.collapseCollateral,
+      expanded: [...state.expandedAncestors],
+    }));
+  } catch {
+    // Storage may be unavailable; the view simply resets next visit.
+  }
+}
+
+function restoreViewState() {
+  let stored;
+  try {
+    stored = JSON.parse(localStorage.getItem(VIEW_STATE_KEY));
+  } catch {
+    return;
+  }
+  if (!stored || typeof stored !== "object") return;
+  if (typeof stored.collapseCollateral === "boolean") {
+    state.collapseCollateral = stored.collapseCollateral;
+  }
+  if (Array.isArray(stored.expanded)) {
+    state.expandedAncestors = new Set(stored.expanded.filter((id) => personById(id)));
   }
 }
 
@@ -1053,6 +1087,7 @@ function hiddenAncestorsAbove(personId, visible, index) {
 
 function expandParents(personId) {
   state.expandedAncestors.add(personId);
+  saveViewState();
   fitTree();
   render();
 }
@@ -1069,6 +1104,7 @@ function expandAncestorBranch(personId) {
     state.expandedAncestors.add(id);
     queue.push(...(index.get(id)?.parents || []), ...(index.get(id)?.spouses || []));
   }
+  saveViewState();
   fitTree();
   render();
 }
@@ -1076,12 +1112,14 @@ function expandAncestorBranch(personId) {
 function collapseParents(personId) {
   // Deeper expansions are kept so re-expanding restores the branch as it was.
   state.expandedAncestors.delete(personId);
+  saveViewState();
   fitTree();
   render();
 }
 
 function resetExpandedAncestors() {
   state.expandedAncestors = new Set();
+  saveViewState();
 }
 
 function connectedRelatives(rootId, index) {
@@ -1911,6 +1949,7 @@ function revealAncestorPath(targetId) {
       const parentSpouses = index.get(parentId)?.spouses || new Set();
       if (parentId === targetId || parentSpouses.has(targetId)) {
         for (const link of nextChain) state.expandedAncestors.add(link);
+        saveViewState();
         return true;
       }
       queue.push({ id: parentId, chain: nextChain });
@@ -2524,6 +2563,8 @@ export const __test = {
   buildBranch,
   expandedTreeIds,
   hiddenAncestorsAbove,
+  saveViewState,
+  restoreViewState,
   expandAncestorBranch,
   revealAncestorPath,
   directRelatives,
