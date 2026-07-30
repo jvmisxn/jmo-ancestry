@@ -656,6 +656,18 @@ dd,
   opacity: 0.24;
 }
 
+/* Connectors touching the selected person, so their card's links to parents,
+   spouses, and children can be traced through the rest of the web. */
+.tree-link.focused {
+  stroke: var(--accent-strong);
+  stroke-width: 3.25;
+  opacity: 1;
+}
+
+.tree-link.spouse-link.focused {
+  stroke-width: 2.75;
+}
+
 .family-unit {
   fill: rgba(255, 255, 255, 0.24);
   stroke: rgba(67, 99, 124, 0.14);

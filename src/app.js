@@ -615,8 +615,9 @@ function renderTree() {
   els.svg.append(g);
 
   for (const link of links) {
+    const focused = link.people?.includes(selected.id);
     g.append(svgEl("path", {
-      class: `tree-link ${link.kind || ""} ${!state.collapseCollateral && !link.direct ? "dimmed" : ""}`,
+      class: `tree-link ${link.kind || ""} ${!state.collapseCollateral && !link.direct ? "dimmed" : ""} ${focused ? "focused" : ""}`,
       d: link.d,
     }));
   }
@@ -1416,6 +1417,7 @@ function layoutLinks(nodes, index, directIds) {
         links.push({
           kind: "spouse-link",
           direct: directIds.has(left.person.id) && directIds.has(right.person.id),
+          people: [left.person.id, right.person.id],
           d: `M ${left.x + NODE_HALF_WIDTH} ${left.y} L ${right.x - NODE_HALF_WIDTH} ${right.y}`,
         });
       }
@@ -1430,6 +1432,7 @@ function layoutLinks(nodes, index, directIds) {
       links.push({
         kind: "family-link",
         direct: directChild,
+        people: [...parentIds, childNode.person.id],
         d: directChild && state.collapseCollateral
           ? directAncestorPath(linkStartX, parentBottomY, childNode.x, childNode.y - NODE_HALF_HEIGHT)
           : familyCurvePath(linkStartX, parentBottomY, childNode.x, childNode.y - NODE_HALF_HEIGHT),
@@ -1447,14 +1450,17 @@ function layoutLinks(nodes, index, directIds) {
     const busMinX = Math.min(minChildX, parentCenter);
     const busMaxX = Math.max(maxChildX, parentCenter);
 
+    const familyPeople = [...parentIds, ...childrenByX.map((child) => child.person.id)];
     links.push({
       kind: "family-link",
       direct,
+      people: familyPeople,
       d: `M ${parentCenter} ${parentBottomY} L ${parentCenter} ${busY}`,
     });
     links.push({
       kind: "family-link",
       direct,
+      people: familyPeople,
       d: `M ${busMinX} ${busY} L ${busMaxX} ${busY}`,
     });
 
@@ -1462,6 +1468,7 @@ function layoutLinks(nodes, index, directIds) {
       links.push({
         kind: "family-link",
         direct: directIds.has(childNode.person.id) && parentIds.some((id) => directIds.has(id)),
+        people: [...parentIds, childNode.person.id],
         d: `M ${childNode.x} ${busY} L ${childNode.x} ${childNode.y - NODE_HALF_HEIGHT}`,
       });
     }
@@ -1478,6 +1485,7 @@ function layoutLinks(nodes, index, directIds) {
       links.push({
         kind: "spouse-link",
         direct: directIds.has(left.person.id) && directIds.has(right.person.id),
+        people: [left.person.id, right.person.id],
         d: `M ${left.x + NODE_HALF_WIDTH} ${left.y} L ${right.x - NODE_HALF_WIDTH} ${right.y}`,
       });
     }
