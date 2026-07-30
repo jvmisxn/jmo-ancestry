@@ -54,6 +54,7 @@ const els = {
   detailPhoto: document.querySelector("#detail-photo"),
   detailStory: document.querySelector("#detail-story"),
   detailFacts: document.querySelector("#detail-facts"),
+  detailTimeline: document.querySelector("#detail-timeline"),
   detailNotes: document.querySelector("#detail-notes"),
   detailRelations: document.querySelector("#detail-relations"),
   detailSources: document.querySelector("#detail-sources"),
@@ -421,6 +422,7 @@ function renderDetails() {
     fact("Known as", person.aliases?.join(", ")),
     fact("Tags", person.tags?.join(", ")),
   );
+  renderTimeline(person);
   renderNotes(person);
   els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
   els.centerPerson.disabled = person.id === root?.id;
@@ -492,6 +494,120 @@ function renderNotes(person) {
     });
     els.detailNotes.append(toggle);
   }
+}
+
+// Chronological life events for the profile: birth, children's births, dated
+// source records (censuses, obituaries), and death, sorted by year. Rank keeps
+// same-year ties sensible: birth first, then children, then death, then
+// records (so an obituary lands after "Died", a birth-year census after "Born").
+function lifeTimeline(person, index = relationshipIndex()) {
+  const events = [];
+  const birthYear = numericYear(person.birth?.date);
+  if (birthYear !== null) {
+    events.push({ year: birthYear, rank: 0, label: "Born", detail: formatEvent(person.birth) });
+  }
+
+  for (const childId of orderedChildren([person.id], index)) {
+    const child = personById(childId);
+    const year = numericYear(child?.birth?.date);
+    if (year === null) continue;
+    const age = birthYear !== null && year >= birthYear ? year - birthYear : null;
+    events.push({
+      year,
+      rank: 1,
+      personId: childId,
+      label: `${child.name} born`,
+      detail: [age !== null ? `around age ${age}` : "", child.birth?.place || ""].filter(Boolean).join(" · "),
+    });
+  }
+
+  const deathYear = numericYear(person.death?.date);
+  if (deathYear !== null) {
+    const age = ageAtDeath(person);
+    events.push({
+      year: deathYear,
+      rank: 2,
+      label: "Died",
+      detail: [formatEvent(person.death), age ? (age.approx ? `about age ${age.years}` : `aged ${age.years}`) : ""]
+        .filter(Boolean).join(" · "),
+    });
+  }
+
+  for (const source of profileSources(person)) {
+    const year = numericYear(source.date);
+    if (year === null) continue;
+    events.push({
+      year,
+      rank: 3,
+      record: true,
+      label: source.label || source.title || source.url,
+      detail: [source.publication, source.repository].filter(Boolean).join(" · "),
+      url: source.url || "",
+    });
+  }
+
+  return events.sort((a, b) => a.year - b.year || a.rank - b.rank);
+}
+
+function numericYear(value) {
+  const match = String(value || "").match(/\d{4}/);
+  return match ? Number(match[0]) : null;
+}
+
+// The timeline only earns its space when it adds something beyond the
+// Born/Died facts already listed above it.
+function renderTimeline(person) {
+  const events = lifeTimeline(person);
+  const extras = events.filter((event) => event.rank === 1 || event.record);
+  els.detailTimeline.hidden = !extras.length;
+  els.detailTimeline.replaceChildren();
+  if (!extras.length) return;
+
+  const label = document.createElement("p");
+  label.className = "notes-label";
+  label.textContent = "Life timeline";
+  els.detailTimeline.append(label);
+
+  const list = document.createElement("ol");
+  list.className = "timeline-list";
+  for (const event of events) {
+    const item = document.createElement("li");
+    item.className = "timeline-item";
+
+    const year = document.createElement("span");
+    year.className = "timeline-year";
+    year.textContent = String(event.year);
+    item.append(year);
+
+    const body = document.createElement("span");
+    body.className = "timeline-body";
+    let title;
+    if (event.url) {
+      title = document.createElement("a");
+      title.href = event.url;
+      title.target = "_blank";
+      title.rel = "noreferrer";
+    } else if (event.personId) {
+      title = document.createElement("button");
+      title.type = "button";
+      title.addEventListener("click", () => selectPerson(event.personId, false, true));
+    } else {
+      title = document.createElement("strong");
+    }
+    title.className = "timeline-label";
+    title.textContent = event.label;
+    body.append(title);
+
+    if (event.detail) {
+      const detail = document.createElement("small");
+      detail.className = "timeline-detail";
+      detail.textContent = event.detail;
+      body.append(detail);
+    }
+    item.append(body);
+    list.append(item);
+  }
+  els.detailTimeline.append(list);
 }
 
 function renderProfilePhoto(person) {
@@ -2393,6 +2509,7 @@ export const __test = {
   orderedParentIds,
   kinshipLabel,
   ageAtDeath,
+  lifeTimeline,
   formatYears,
   formatEvent,
   surnameSortKey,

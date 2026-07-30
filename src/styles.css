@@ -993,6 +993,83 @@ dd {
   color: var(--accent-strong);
 }
 
+.timeline {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.timeline-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.timeline-year {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: right;
+}
+
+.timeline-body {
+  display: grid;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(125, 79, 44, 0.22);
+}
+
+.timeline-label {
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+a.timeline-label {
+  justify-self: start;
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent-strong) 45%, transparent);
+  text-underline-offset: 2px;
+}
+
+a.timeline-label:hover,
+a.timeline-label:focus-visible {
+  text-decoration-color: var(--accent-strong);
+}
+
+button.timeline-label {
+  justify-self: start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.timeline-label:hover,
+button.timeline-label:focus-visible {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.timeline-detail {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 .relation-item {
   gap: 4px;
 }
@@ -1021,6 +1098,7 @@ dd {
 }
 
 .sources-panel[hidden],
+.timeline[hidden],
 .notes[hidden],
 .profile-photo[hidden] {
   display: none;
