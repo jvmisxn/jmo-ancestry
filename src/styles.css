@@ -552,6 +552,21 @@ dd,
   color: var(--accent-strong);
 }
 
+.meta-pill.status-verified {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.meta-pill.status-lead {
+  background: #f6ecd4;
+  color: #7c5a14;
+}
+
+.meta-pill.status-attention {
+  background: #f6e1dc;
+  color: #8c3126;
+}
+
 .empty-state {
   padding: 15px 14px;
   border: 1px dashed rgba(67, 99, 124, 0.28);

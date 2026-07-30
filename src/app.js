@@ -556,6 +556,7 @@ function renderDetails() {
       age ? metaPill(age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
       sources.length ? metaPill(`${sources.length} source${sources.length === 1 ? "" : "s"}`) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
+      ...researchStatusPills(person),
     ].filter(Boolean),
   );
   renderProfilePhoto(person);
@@ -564,7 +565,7 @@ function renderDetails() {
     fact("Born", formatEvent(person.birth)),
     fact("Died", formatEvent(person.death)),
     fact("Known as", person.aliases?.join(", ")),
-    fact("Tags", person.tags?.join(", ")),
+    fact("Tags", person.tags?.filter((tag) => !tagStatusTone(tag)).join(", ")),
   );
   renderTimeline(person);
   renderNotes(person);
@@ -2658,8 +2659,13 @@ function renderPersonRow(person, term = "") {
   flags.className = "person-row-flags";
   if (isSelected) flags.append(metaPill("Selected", "selected"));
   if (isFocused) flags.append(metaPill("Tree focus", "focused"));
-  for (const tag of (person.tags || []).filter((tag) => tag !== "sample").slice(0, 2)) {
-    flags.append(metaPill(tag));
+  const rowTags = (person.tags || [])
+    .filter((tag) => tag !== "sample")
+    .map((tag, at) => ({ tag, at, rank: tagStatusRank(tag) }))
+    .sort((a, b) => a.rank - b.rank || a.at - b.at)
+    .slice(0, 2);
+  for (const { tag } of rowTags) {
+    flags.append(metaPill(tag, tagStatusTone(tag)));
   }
   const sourceCount = profileSources(person).length;
   if (sourceCount) flags.append(metaPill(`${sourceCount} source${sourceCount === 1 ? "" : "s"}`));
@@ -2721,6 +2727,47 @@ function metaPill(label, tone = "") {
   pill.className = `meta-pill${tone ? ` ${tone}` : ""}`;
   pill.textContent = label;
   return pill;
+}
+
+// Research tags in the family data double as confidence markers ("needs
+// direct source", "obituary verified", "date conflict", "possible
+// duplicate"). Color those instead of leaving confidence buried in a flat
+// comma list. First matching rule claims a tag; branch/topic tags get no
+// tone and stay neutral.
+const TAG_STATUS_RULES = [
+  { tone: "status-attention", test: /conflict|duplicate|disputed/i },
+  { tone: "status-verified", test: /verified|sourced\b|corroborated|user-provided/i },
+  { tone: "status-lead", test: /needs direct source|\blead\b|probable|\bpossible\b|status unknown/i },
+];
+
+function tagStatusTone(tag) {
+  return TAG_STATUS_RULES.find((rule) => rule.test.test(tag))?.tone || "";
+}
+
+function tagStatusRank(tag) {
+  const at = TAG_STATUS_RULES.findIndex((rule) => rule.test.test(tag));
+  return at === -1 ? TAG_STATUS_RULES.length : at;
+}
+
+// One pill per status tone (most urgent first) keeps the profile header
+// compact when a person carries several same-tone tags ("Ancestry tree
+// lead" + "needs direct source"); the rest ride along in the tooltip.
+function researchStatusPills(person) {
+  const groups = new Map();
+  for (const tag of person.tags || []) {
+    const tone = tagStatusTone(tag);
+    if (!tone) continue;
+    if (!groups.has(tone)) groups.set(tone, []);
+    groups.get(tone).push(tag);
+  }
+  return TAG_STATUS_RULES
+    .filter((rule) => groups.has(rule.tone))
+    .map((rule) => {
+      const tags = groups.get(rule.tone);
+      const pill = metaPill(tags[0], rule.tone);
+      if (tags.length > 1) pill.title = tags.join(" · ");
+      return pill;
+    });
 }
 
 function profileRelations(person) {
@@ -3070,4 +3117,7 @@ export const __test = {
   generationRowLabel,
   treeBounds,
   nodeNameLines,
+  tagStatusTone,
+  tagStatusRank,
+  researchStatusPills,
 };
