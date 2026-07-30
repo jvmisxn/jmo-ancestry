@@ -1084,7 +1084,9 @@ function ancestorPathSlot(path, rootParentCount) {
   const branchCount = 2 ** depthPastRootParent;
   const outwardRank = direction < 0 ? branchRank : branchCount - 1 - branchRank;
   const depthOffset = depthPastRootParent * 0.18;
-  const branchOffset = outwardRank * 0.62;
+  // Branches step by a full slot: adjacent slots sit one card-plus-gap apart,
+  // so same-row ancestor couples never overlap (0.62 used to stack them).
+  const branchOffset = outwardRank;
   return direction * (1 + depthOffset + branchOffset);
 }
 
