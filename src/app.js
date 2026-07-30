@@ -936,10 +936,14 @@ function renderTree() {
       }
     });
 
+    // Hovering a card answers "who is this relative to the focus person?"
+    // so deep rows of similar names stop needing a profile click to identify.
     const hint = svgEl("title", {});
+    const hintYears = formatYears(node.person);
+    const hintKinship = node.person.id === root.id ? "" : kinshipLabel(node.person.id, root.id, index);
     hint.textContent = node.person.id === state.rootId
-      ? node.person.name
-      : `${node.person.name} — double-click to make tree focus`;
+      ? [node.person.name, hintYears, "current tree focus"].filter(Boolean).join(" · ")
+      : `${[node.person.name, hintYears, hintKinship ? `${root.name}'s ${hintKinship}` : ""].filter(Boolean).join(" · ")} — double-click to make tree focus`;
     group.append(hint);
     group.append(svgEl("rect", { x: -NODE_HALF_WIDTH, y: -NODE_HALF_HEIGHT, width: NODE.width, height: NODE.height, rx: 8 }));
     renderTreePortrait(group, node.person);
