@@ -51,8 +51,8 @@ app.state.data = {
     { id: "spouse", name: "Spouse Example", birth: null, death: { date: "1940-02-10" }, parents: [], spouses: ["root"], children: ["kid-a", "kid-b", "kid-undated"], aliases: [], tags: [], notes: "", sources: [] },
     { id: "p-mother", name: "Mother Example", birth: null, death: { date: "1912-05-01" }, parents: [], spouses: [], children: ["root"], aliases: [], tags: [], notes: "", sources: [] },
     { id: "p-father", name: "Father Example", birth: null, death: { date: "1875" }, parents: [], spouses: [], children: ["root"], aliases: [], tags: [], notes: "", sources: [] },
-    { id: "kid-a", name: "Ada Junior", birth: { date: "abt 1905" }, death: null, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
-    { id: "kid-b", name: "Ben Example", birth: { date: "1908-11-20", place: "Springfield" }, death: null, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
+    { id: "kid-a", name: "Ada Junior", birth: { date: "abt 1905" }, death: { date: "1932-01-15" }, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
+    { id: "kid-b", name: "Ben Example", birth: { date: "1908-11-20", place: "Springfield" }, death: { date: "1980" }, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
     { id: "kid-undated", name: "No Dates", birth: null, death: null, parents: ["root", "spouse"], spouses: [], children: [], aliases: [], tags: [], notes: "", sources: [] },
   ],
 };
@@ -77,6 +77,7 @@ check("event order (year + label)", events.map((e) => `${e.year} ${e.label}`), [
   "1905 Ada Junior born",
   "1908 Ben Example born",
   "1912 Mother Example died",
+  "1932 Ada Junior died",
   "1940 Spouse Example died",
   "1950 Died",
   "1950 Obituary",
@@ -87,6 +88,8 @@ check("undated child and undated source excluded", events.some((e) => /No Dates|
 check("parent death before person's birth excluded", events.some((e) => e.label === "Father Example died"), false);
 check("parent-loss event carries role + age", events.find((e) => e.label === "Mother Example died")?.detail, "parent · around age 32");
 check("spouse-loss event links to the spouse", events.find((e) => e.label === "Spouse Example died")?.personId, "spouse");
+check("child-loss event carries role + age", events.find((e) => e.label === "Ada Junior died")?.detail, "child · around age 52");
+check("child death after person's own death excluded", events.some((e) => e.label === "Ben Example died"), false);
 check("record keeps its link", events.find((e) => e.record)?.url, "https://example.com/census-1900");
 check("in-lifetime record carries person's age", events.find((e) => e.label === "1900 United States Census")?.detail, "around age 20");
 check("record age joins existing meta", events.find((e) => e.label === "Obituary")?.detail, "around age 70 · The Gazette");

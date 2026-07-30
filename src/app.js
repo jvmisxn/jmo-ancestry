@@ -798,6 +798,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
   for (const { ids, role } of [
     { ids: index.get(person.id)?.parents, role: "parent" },
     { ids: index.get(person.id)?.spouses, role: "spouse" },
+    { ids: index.get(person.id)?.children, role: "child" },
   ]) {
     for (const relativeId of ids || []) {
       const relative = personById(relativeId);
