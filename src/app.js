@@ -105,8 +105,8 @@ async function init() {
     if (event.key === "Enter") {
       const term = els.search.value.trim().toLowerCase();
       if (!term) return;
-      const [first] = searchMatches(term);
-      if (first) selectPerson(first.id, false, true);
+      const next = nextSearchMatch(searchMatches(term), state.selectedId);
+      if (next) selectPerson(next.id, false, true);
     } else if (event.key === "Escape" && els.search.value) {
       event.stopPropagation();
       els.search.value = "";
@@ -411,6 +411,17 @@ function searchRank(person, term) {
   if (name.includes(term)) return 2;
   if ((person.aliases || []).some((alias) => alias.toLowerCase().includes(term))) return 3;
   return 4;
+}
+
+// Enter in the search box walks the ranked matches: the first press selects
+// the top hit and each following press advances to the next match, wrapping
+// at the end — so five same-named cousins can be stepped through one Enter at
+// a time while the tree pans/reveals each. The walk is keyed off whichever
+// person is currently selected, so clicking elsewhere restarts it cleanly.
+function nextSearchMatch(matches, selectedId) {
+  if (!matches.length) return null;
+  const currentIndex = matches.findIndex((person) => person.id === selectedId);
+  return matches[(currentIndex + 1) % matches.length];
 }
 
 function defaultPeopleSummary() {
@@ -2743,6 +2754,7 @@ export const __test = {
   surnameSortKey,
   surnameLabel,
   searchMatches,
+  nextSearchMatch,
   humanizeDate,
   ancestorLaneDirection,
   generationOffset,
