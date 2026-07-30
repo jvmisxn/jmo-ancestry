@@ -39,6 +39,7 @@ const els = {
   importJson: document.querySelector("#import-json"),
   focusDirect: document.querySelector("#focus-direct"),
   fit: document.querySelector("#fit-tree"),
+  collapseBranches: document.querySelector("#collapse-branches"),
   exportJson: document.querySelector("#export-json"),
   title: document.querySelector("#tree-title"),
   treeSubtitle: document.querySelector("#tree-subtitle"),
@@ -131,6 +132,11 @@ async function init() {
     render();
   });
   els.fit.addEventListener("click", fitTree);
+  els.collapseBranches.addEventListener("click", () => {
+    resetExpandedAncestors();
+    fitTree();
+    render();
+  });
   els.exportJson.addEventListener("click", exportData);
   els.centerPerson.addEventListener("click", () => {
     state.rootId = state.selectedId;
@@ -1237,6 +1243,10 @@ function renderTree() {
   const height = Math.max(els.viewport.clientHeight, 520);
   const visibleParents = nodes.filter((node) => generationOffset(root.id, node.person.id, index) < 0).length;
   const hiddenParentCount = state.collapseCollateral ? hiddenExpandableParentCount(nodes, index) : 0;
+  const expandedBranchCount =
+    state.expandedAncestors.size + state.expandedSiblings.size + state.expandedChildren.size;
+  // Expansions only shape the minimal tree, so the reset button stays out of full view.
+  els.collapseBranches.hidden = !state.collapseCollateral || expandedBranchCount === 0;
   const directCount = nodes.filter((node) => directIds.has(node.person.id)).length;
   const collateralCount = nodes.length - directCount;
 
@@ -3399,6 +3409,7 @@ export const __test = {
   saveViewState,
   restoreViewState,
   expandAncestorBranch,
+  resetExpandedAncestors,
   revealAncestorPath,
   directRelatives,
   layoutNodes,

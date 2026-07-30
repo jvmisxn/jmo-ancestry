@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>JMO Ancestry</title>
-    <link rel="stylesheet" href="./src/styles.css?v=child-expand-1" />
+    <link rel="stylesheet" href="./src/styles.css?v=collapse-all-1" />
   </head>
   <body>
     <main class="app-shell">
@@ -71,6 +71,7 @@
               <div class="view-actions" aria-label="View panels">
                 <button id="focus-direct" type="button" title="Show every connected relative around this family">Show full tree</button>
                 <button id="fit-tree" type="button" title="Fit tree to view">Fit view</button>
+                <button id="collapse-branches" type="button" title="Collapse every expanded branch back to the minimal tree" hidden>Collapse branches</button>
                 <button id="toggle-people" type="button" aria-pressed="false">People</button>
                 <button id="toggle-profile" type="button" aria-pressed="false">Profile</button>
               </div>
@@ -150,6 +151,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/app.js?v=child-expand-1"></script>
+    <script type="module" src="./src/app.js?v=collapse-all-1"></script>
   </body>
 </html>
