@@ -2102,11 +2102,15 @@ function parseDateParts(value) {
   };
 }
 
+// Year range for cards, rows, and pills. Death-only records read "d. 1954"
+// instead of a broken-looking "-1954"; full ranges use an en dash.
 function formatYears(person) {
   const born = person.birth?.date ? person.birth.date.slice(0, 4) : "";
   const died = person.death?.date ? person.death.date.slice(0, 4) : "";
-  if (!born && !died) return "";
-  return died ? `${born}-${died}` : `b. ${born}`;
+  if (born && died) return `${born}–${died}`;
+  if (born) return `b. ${born}`;
+  if (died) return `d. ${died}`;
+  return "";
 }
 
 function formatEvent(event) {
@@ -2201,6 +2205,7 @@ export const __test = {
   orderedParentIds,
   kinshipLabel,
   ageAtDeath,
+  formatYears,
   ancestorLaneDirection,
   generationOffset,
   treeBounds,
