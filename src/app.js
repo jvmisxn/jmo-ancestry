@@ -1012,7 +1012,35 @@ function layoutNodes(branch, index) {
     y += generationGap + (maxRows - 1) * laneGap;
   }
   applyProgressiveAncestorLanes(nodes, index);
+  separateFullViewRows(nodes);
   return nodes;
+}
+
+// Branch drift shifts whole ancestor groups sideways after row widths were
+// already computed, so in the full-network view drifted groups can land on
+// their neighbors. Sweep each visual row: enforce a minimum gap left to
+// right, then re-center so the sweep doesn't push the whole row rightward.
+// (Minimal mode has its own side-aware pass in separateAncestorRows.)
+function separateFullViewRows(nodes) {
+  if (state.collapseCollateral) return;
+  const minGap = NODE.width + 22;
+  const rowsByY = new Map();
+  for (const node of nodes) {
+    if (!rowsByY.has(node.y)) rowsByY.set(node.y, []);
+    rowsByY.get(node.y).push(node);
+  }
+  for (const rowNodes of rowsByY.values()) {
+    if (rowNodes.length < 2) continue;
+    const sorted = [...rowNodes].sort((a, b) => a.x - b.x);
+    const spanBefore = sorted[sorted.length - 1].x - sorted[0].x;
+    for (let i = 1; i < sorted.length; i += 1) {
+      if (sorted[i].x - sorted[i - 1].x < minGap) sorted[i].x = sorted[i - 1].x + minGap;
+    }
+    const spanAfter = sorted[sorted.length - 1].x - sorted[0].x;
+    const shift = (spanAfter - spanBefore) / 2;
+    if (!shift) continue;
+    for (const node of sorted) node.x -= shift;
+  }
 }
 
 function applyProgressiveAncestorLanes(nodes, index) {
