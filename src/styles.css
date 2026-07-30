@@ -1640,3 +1640,79 @@ button.timeline-label:focus-visible {
     gap: 4px;
   }
 }
+
+/* Printing (or save-as-PDF via the print dialog) turns the open profile into
+   a clean document: the sidebar, tree, and controls disappear, the profile
+   panel becomes the page, and Sources print even while collapsed on screen
+   (the source list stays populated in the DOM when the panel is folded). */
+@media print {
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .sidebar,
+  .tree-area,
+  .window-close,
+  .profile-actions,
+  .help-overlay,
+  .photo-lightbox,
+  .drop-overlay {
+    display: none !important;
+  }
+
+  .app-shell {
+    display: block;
+    height: auto;
+  }
+
+  .details,
+  .profile-collapsed .details {
+    opacity: 1;
+    transform: none;
+    border: 0;
+    background: #fff;
+    backdrop-filter: none;
+    overflow: visible;
+  }
+
+  .details-shell {
+    height: auto;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .sources-panel[hidden] {
+    display: grid !important;
+  }
+
+  .profile-photo img,
+  .photo-placeholder {
+    max-height: 3.4in;
+    object-fit: contain;
+    background: #fff;
+  }
+
+  .workspace-section {
+    break-inside: auto;
+  }
+
+  .source-item,
+  .timeline-item,
+  .relation-item,
+  .profile-photo,
+  .life-story p {
+    break-inside: avoid;
+  }
+
+  .relation-item,
+  .source-item {
+    box-shadow: none;
+  }
+
+  a {
+    color: inherit;
+  }
+}

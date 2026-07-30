@@ -59,6 +59,7 @@ const HELP_TIPS = [
     area: "Profile",
     tips: [
       { keys: ["Click photo"], does: "View it full size; ← → cycle a multi-photo profile, Esc closes" },
+      { keys: ["⌘", "P"], does: "Print (or save as PDF) the open profile as a clean document — story, timeline, relationships, and sources" },
     ],
   },
   {
