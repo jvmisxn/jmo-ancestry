@@ -710,6 +710,38 @@ dd,
   background: rgba(100, 88, 76, 0.56);
 }
 
+/* Ancestor branch sides: the stripe on ancestor cards and its legend swatch
+   share these two tints — first-listed parent's branch, then the second's. */
+.legend-branches {
+  display: contents;
+}
+
+.legend-swatch.branch-0 {
+  background: var(--blue);
+}
+
+.legend-swatch.branch-1 {
+  background: #8a4a63;
+}
+
+.tree-node .branch-stripe {
+  stroke: none;
+  filter: none;
+  pointer-events: none;
+}
+
+.tree-node.branch-side-0 .branch-stripe {
+  fill: rgba(67, 99, 124, 0.8);
+}
+
+.tree-node.branch-side-1 .branch-stripe {
+  fill: rgba(138, 74, 99, 0.75);
+}
+
+.tree-node.dimmed .branch-stripe {
+  opacity: 0.5;
+}
+
 .view-actions {
   display: flex;
   flex-wrap: wrap;

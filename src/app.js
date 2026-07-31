@@ -43,6 +43,7 @@ const HELP_TIPS = [
       { keys: ["Drag / scroll"], does: "Pan and zoom the tree (pinch on touch)" },
       { keys: ["Hover"], does: "Trace that person's connectors and their line back to the tree focus" },
       { keys: ["Shift", "click"], does: "On a “Show parents” pill with more generations above: reveal the whole branch at once" },
+      { keys: ["Stripe"], does: "The colored edge on ancestor cards marks which parent's branch they hang from — the legend names each side" },
     ],
   },
   {
@@ -79,6 +80,7 @@ const els = {
   clearData: document.querySelector("#clear-data"),
   importJson: document.querySelector("#import-json"),
   focusDirect: document.querySelector("#focus-direct"),
+  legendBranches: document.querySelector("#legend-branches"),
   fit: document.querySelector("#fit-tree"),
   zoomIn: document.querySelector("#zoom-in"),
   zoomOut: document.querySelector("#zoom-out"),
@@ -1400,6 +1402,8 @@ function renderTree() {
   // so a person can be spotted inside a crowded branch without leaving the tree.
   const searchTerm = els.search.value.trim().toLowerCase();
   const searchIds = searchTerm ? new Set(searchMatches(searchTerm).map((match) => match.id)) : null;
+  const branchSides = branchSideAssignments(root.id, nodes, index);
+  renderBranchLegend(root.id, branchSides.size > 0, index);
   const familyUnits = layoutFamilyUnits(nodes, index, directIds);
   const links = layoutLinks(nodes, index, directIds);
   const width = Math.max(els.viewport.clientWidth, 360);
@@ -1595,7 +1599,7 @@ function renderTree() {
     }
 
     const group = svgEl("g", {
-      class: `tree-node ${node.person.id === state.rootId ? "root" : ""} ${node.person.id === state.selectedId ? "selected" : ""} ${isCollateral ? "dimmed" : ""} ${searchIds ? (searchIds.has(node.person.id) ? "search-hit" : "search-miss") : ""}`,
+      class: `tree-node ${node.person.id === state.rootId ? "root" : ""} ${node.person.id === state.selectedId ? "selected" : ""} ${isCollateral ? "dimmed" : ""} ${searchIds ? (searchIds.has(node.person.id) ? "search-hit" : "search-miss") : ""} ${branchSides.has(node.person.id) ? `branch-side-${branchSides.get(node.person.id)}` : ""}`,
       transform: `translate(${node.x} ${node.y})`,
       tabindex: "0",
       role: "button",
@@ -1640,6 +1644,16 @@ function renderTree() {
       : `${[node.person.name, hintYears, hintKinship ? `${root.name}'s ${hintKinship}` : ""].filter(Boolean).join(" · ")} — double-click to make tree focus`;
     group.append(hint);
     group.append(svgEl("rect", { x: -NODE_HALF_WIDTH, y: -NODE_HALF_HEIGHT, width: NODE.width, height: NODE.height, rx: 8 }));
+    if (branchSides.has(node.person.id)) {
+      group.append(svgEl("rect", {
+        class: "branch-stripe",
+        x: -NODE_HALF_WIDTH + 4,
+        y: -NODE_HALF_HEIGHT + 8,
+        width: 5,
+        height: NODE.height - 16,
+        rx: 2.5,
+      }));
+    }
     renderTreePortrait(group, node.person);
     const nameLines = nodeNameLines(node.person.name);
     if (nameLines.length === 1) {
@@ -2367,6 +2381,51 @@ function ancestorSide(rootParents, targetId, index) {
     if (isAncestorOf(targetId, rootParents[side], index)) return side;
   }
   return null;
+}
+
+// Which of the tree focus's two parent branches each visible ancestor hangs
+// from, so intermixed upper generations can be told apart at a glance. Blood
+// ancestors match directly; ancestor-row collaterals (great-uncles) and
+// ancestors' spouses inherit a side from a parent or spouse who does match.
+// Descendants and the focus generation carry no side — they belong to both.
+function branchSideAssignments(rootId, nodes, index) {
+  const sides = new Map();
+  const rootParents = orderedParentIds(rootId, index);
+  if (rootParents.length < 2) return sides;
+  for (const node of nodes) {
+    if (generationOffset(rootId, node.person.id, index) >= 0) continue;
+    const side = branchSide(rootParents, node.person.id, index);
+    if (side !== null) sides.set(node.person.id, Math.min(side, 1));
+  }
+  return sides;
+}
+
+function branchSide(rootParents, personId, index) {
+  const own = ancestorSide(rootParents, personId, index);
+  if (own !== null) return own;
+  for (const relatives of [index.get(personId)?.parents, index.get(personId)?.spouses]) {
+    for (const relativeId of relatives || []) {
+      const side = ancestorSide(rootParents, relativeId, index);
+      if (side !== null) return side;
+    }
+  }
+  return null;
+}
+
+// Names the stripe colors ("Smith side" / "Jones side") next to the existing
+// Direct/Collateral legend entries, so the tint is self-explanatory.
+function renderBranchLegend(rootId, visible, index) {
+  els.legendBranches.replaceChildren();
+  if (!visible) return;
+  orderedParentIds(rootId, index).slice(0, 2).forEach((parentId, side) => {
+    const parent = personById(parentId);
+    if (!parent) return;
+    const entry = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.className = `legend-swatch branch-${side}`;
+    entry.append(swatch, `${surnameFromName(parent.name) || parent.name} side`);
+    els.legendBranches.append(entry);
+  });
 }
 
 function isAncestorOf(ancestorId, descendantId, index) {
@@ -3831,6 +3890,8 @@ export const __test = {
   sourceRepositoryName,
   cleanSourceLabel,
   ancestorLaneDirection,
+  branchSideAssignments,
+  branchSide,
   generationOffset,
   generationRowLabel,
   treeBounds,
