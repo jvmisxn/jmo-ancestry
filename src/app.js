@@ -52,6 +52,7 @@ const HELP_TIPS = [
       { keys: ["↑", "↓", "←", "→"], does: "Walk from a focused card to parents, children, and along the generation row" },
       { keys: ["Enter"], does: "Open the focused card's profile" },
       { keys: ["Shift", "Enter"], does: "Make the focused card the tree focus" },
+      { keys: ["+", "−"], does: "Zoom the tree in and out (same as the corner buttons)" },
       { keys: ["?"], does: "Open or close these tips" },
     ],
   },
@@ -79,6 +80,8 @@ const els = {
   importJson: document.querySelector("#import-json"),
   focusDirect: document.querySelector("#focus-direct"),
   fit: document.querySelector("#fit-tree"),
+  zoomIn: document.querySelector("#zoom-in"),
+  zoomOut: document.querySelector("#zoom-out"),
   collapseBranches: document.querySelector("#collapse-branches"),
   exportJson: document.querySelector("#export-json"),
   title: document.querySelector("#tree-title"),
@@ -181,6 +184,12 @@ async function init() {
     render();
   });
   els.fit.addEventListener("click", fitTree);
+  for (const button of [els.zoomIn, els.zoomOut]) {
+    // Keep presses on the buttons from starting a viewport pan underneath.
+    button.addEventListener("pointerdown", (event) => event.stopPropagation());
+  }
+  els.zoomIn.addEventListener("click", () => zoomStep(1));
+  els.zoomOut.addEventListener("click", () => zoomStep(-1));
   els.collapseBranches.addEventListener("click", () => {
     resetExpandedAncestors();
     fitTree();
@@ -2896,6 +2905,13 @@ function onZoom(event) {
   zoomAt(event.clientX - rect.left, event.clientY - rect.top, state.scale + direction);
 }
 
+// The +/− buttons and keyboard zoom have no cursor to anchor to, so they
+// zoom around the viewport center instead.
+function zoomStep(direction) {
+  const rect = els.viewport.getBoundingClientRect();
+  zoomAt(rect.width / 2, rect.height / 2, state.scale * (direction > 0 ? 1.2 : 1 / 1.2));
+}
+
 // Anchor the zoom so the point under the cursor/fingers stays put.
 function zoomAt(pointerX, pointerY, nextScale) {
   const clamped = Math.min(1.8, Math.max(0.34, nextScale));
@@ -3110,6 +3126,14 @@ function enableHelpOverlay() {
       setOpen(els.helpOverlay.hidden);
     } else if (event.key === "Escape" && !els.helpOverlay.hidden) {
       setOpen(false);
+    } else if (
+      (event.key === "+" || event.key === "=" || event.key === "-")
+      && !typing && !event.metaKey && !event.ctrlKey && !event.altKey
+      && els.helpOverlay.hidden && els.photoLightbox.hidden
+    ) {
+      // Plain +/− zoom the tree; ⌘/Ctrl variants stay with the browser.
+      event.preventDefault();
+      zoomStep(event.key === "-" ? -1 : 1);
     }
   });
 }
@@ -3826,4 +3850,6 @@ export const __test = {
   profileObituaries,
   obituarySubject,
   obituarySubjectIsPerson,
+  zoomStep,
+  zoomAt,
 };
