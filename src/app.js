@@ -735,12 +735,29 @@ function renderDetails() {
   els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
   els.centerPerson.disabled = person.id === root?.id;
 
+  // When a person has children from multiple spouses, show which parent each
+  // child shares — mirrors the "with [spouse]" label already used in the
+  // life timeline so the relationship list tells the same story.
+  const spouseSet = new Set(relations.spouses);
+  let childNoteById = null;
+  if (spouseSet.size > 1) {
+    childNoteById = new Map();
+    for (const childId of relations.children) {
+      const child = personById(childId);
+      const otherParentId = (child?.parents || []).find(
+        (pid) => pid !== person.id && spouseSet.has(pid),
+      );
+      if (otherParentId) {
+        childNoteById.set(childId, `with ${givenName(personById(otherParentId)?.name)}`);
+      }
+    }
+  }
   const relationItems = [
     ...linkGroup("Parents", relations.parents),
     ...linkGroup("Siblings", relations.siblings),
     ...linkGroup("Half-siblings", relations.halfSiblings),
     ...linkGroup("Spouses", relations.spouses),
-    ...linkGroup("Children", relations.children),
+    ...linkGroup("Children", relations.children, childNoteById),
   ];
   els.relationsHeading.textContent = `Relationships (${relationTotal})`;
   els.detailRelations.replaceChildren(
@@ -3476,7 +3493,7 @@ function tagListFact(person) {
   return fragment;
 }
 
-function linkGroup(label, ids = []) {
+function linkGroup(label, ids = [], noteById = null) {
   if (!ids.length) return [];
   const heading = document.createElement("h3");
   heading.textContent = label;
@@ -3501,7 +3518,7 @@ function linkGroup(label, ids = []) {
           if (kinship) kinshipNote = `${givenName(root.name)}'s ${kinship}`;
         }
       }
-      const placeNote = personListMeta(person);
+      const placeNote = (noteById && noteById.get(id)) || personListMeta(person);
       const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "Open profile";
       button.innerHTML = `
         <span class="relation-name">
