@@ -475,6 +475,31 @@ h3 {
   white-space: nowrap;
 }
 
+.source-badge.source-quality-record {
+  background: var(--green-soft);
+  border-color: rgba(42, 107, 80, 0.24);
+  color: var(--green);
+}
+
+.source-badge.source-quality-lead,
+.source-badge.source-quality-index,
+.source-badge.source-quality-memorial {
+  background: #f6ecd4;
+  border-color: rgba(124, 90, 20, 0.24);
+  color: #7c5a14;
+}
+
+.source-badge.source-quality-conflict {
+  background: #f6e1dc;
+  border-color: rgba(140, 49, 38, 0.22);
+  color: #8c3126;
+}
+
+.source-badge.source-quality-photo {
+  background: rgba(67, 99, 124, 0.1);
+  color: var(--muted-strong);
+}
+
 .person-row-years,
 .relation-meta,
 .source-meta,
@@ -1370,6 +1395,20 @@ button.timeline-label:focus-visible {
   gap: 8px;
   border-left: 3px solid var(--accent);
   background: rgba(255, 252, 246, 0.94);
+}
+
+.source-item.source-quality-record {
+  border-left-color: var(--green);
+}
+
+.source-item.source-quality-lead,
+.source-item.source-quality-index,
+.source-item.source-quality-memorial {
+  border-left-color: #b88925;
+}
+
+.source-item.source-quality-conflict {
+  border-left-color: #b84f3e;
 }
 
 .source-item span,

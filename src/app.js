@@ -18,6 +18,10 @@ const state = {
   profileCollapsed: false,
   sourcesExpanded: false,
   notesExpanded: false,
+  peopleById: new Map(),
+  relationshipIndex: null,
+  searchIndex: null,
+  cachedPeople: null,
 };
 
 const NODE = {
@@ -30,6 +34,7 @@ const NODE = {
 
 const NODE_HALF_WIDTH = NODE.width / 2;
 const NODE_HALF_HEIGHT = NODE.height / 2;
+let storeRequestId = 0;
 
 // The tree has grown a lot of invisible interactions (double-click refocus,
 // shift-click reveal-all, arrow-key walking, Enter match cycling); this list
@@ -182,7 +187,7 @@ async function init() {
       resetExpandedAncestors();
     }
     saveViewState();
-    fitTree();
+    fitTree({ renderNow: false });
     render();
   });
   els.fit.addEventListener("click", fitTree);
@@ -201,7 +206,7 @@ async function init() {
   els.centerPerson.addEventListener("click", () => {
     state.rootId = state.selectedId;
     resetExpandedAncestors();
-    fitTree();
+    fitTree({ renderNow: false });
     render();
   });
   els.homePerson.addEventListener("click", () => {
@@ -209,7 +214,7 @@ async function init() {
     state.rootId = state.selectedId;
     syncHash(true);
     resetExpandedAncestors();
-    fitTree();
+    fitTree({ renderNow: false });
     render();
   });
   els.copyLink.addEventListener("click", async () => {
@@ -325,6 +330,7 @@ function restoreViewState() {
 }
 
 async function forgetStoredData() {
+  storeRequestId += 1;
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -335,8 +341,30 @@ async function forgetStoredData() {
   renderDataStatus("Saved family data removed from this browser. Sample data loaded.", "success");
 }
 
+function afterNextPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => setTimeout(resolve, 0));
+  });
+}
+
+function scheduleStoreData(data, onStored) {
+  const requestId = ++storeRequestId;
+  const run = () => {
+    if (requestId !== storeRequestId) return;
+    const stored = storeData(data);
+    if (requestId !== storeRequestId) return;
+    onStored(stored);
+  };
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(run, { timeout: 2000 });
+  } else {
+    setTimeout(run, 0);
+  }
+}
+
 function adoptData(data, place = null) {
   state.data = data;
+  rebuildDataCaches();
   state.selectedId = place?.selectedId || data.meta?.defaultPersonId || data.people[0]?.id;
   state.rootId = place?.rootId || state.selectedId;
   syncHash();
@@ -351,7 +379,7 @@ function adoptData(data, place = null) {
   applyDefaultPanelState();
   syncPanelState();
   els.search.value = "";
-  fitTree();
+  fitTree({ renderNow: false });
   render();
   fitTreeAfterLayout();
 }
@@ -361,10 +389,13 @@ function people() {
 }
 
 function personById(id) {
-  return people().find((person) => person.id === id);
+  ensureDataCaches();
+  return state.peopleById.get(id);
 }
 
 function relationshipIndex() {
+  ensureDataCaches();
+  if (state.relationshipIndex) return state.relationshipIndex;
   const index = new Map(people().map((person) => [
     person.id,
     {
@@ -386,7 +417,19 @@ function relationshipIndex() {
     }
   }
 
+  state.relationshipIndex = index;
   return index;
+}
+
+function rebuildDataCaches() {
+  state.peopleById = new Map(people().map((person) => [person.id, person]));
+  state.relationshipIndex = null;
+  state.searchIndex = null;
+  state.cachedPeople = state.data?.people || null;
+}
+
+function ensureDataCaches() {
+  if (state.cachedPeople !== state.data?.people) rebuildDataCaches();
 }
 
 function render() {
@@ -443,29 +486,56 @@ function storyText(person) {
 }
 
 function searchMatches(term) {
-  const matches = people().filter((person) => {
-    const haystack = [
-      person.name,
-      person.birth?.place,
-      person.death?.place,
-      person.birth?.date,
-      person.death?.date,
-      formatYears(person),
-      person.notes,
-      storyText(person),
-      ...(person.aliases || []),
-      ...(person.tags || []),
-    ].join(" ").toLowerCase();
-    return !term || haystack.includes(term);
-  });
+  const matches = personSearchIndex().filter((entry) => !term || entry.haystack.includes(term));
   if (!term) {
-    return matches.sort((a, b) =>
-      surnameSortKey(a.name).localeCompare(surnameSortKey(b.name)) || a.name.localeCompare(b.name));
+    return matches
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey) || a.person.name.localeCompare(b.person.name))
+      .map((entry) => entry.person);
   }
   return matches
-    .map((person) => ({ person, rank: searchRank(person, term) }))
-    .sort((a, b) => a.rank - b.rank || a.person.name.localeCompare(b.person.name))
-    .map((entry) => entry.person);
+    .map((entry) => ({ entry, rank: searchEntryRank(entry, term) }))
+    .sort((a, b) => a.rank - b.rank || a.entry.person.name.localeCompare(b.entry.person.name))
+    .map(({ entry }) => entry.person);
+}
+
+function personSearchIndex() {
+  ensureDataCaches();
+  if (!state.searchIndex) {
+    state.searchIndex = people().map((person) => ({
+      person,
+      haystack: [
+        person.name,
+        person.birth?.place,
+        person.death?.place,
+        person.birth?.date,
+        person.death?.date,
+        formatYears(person),
+        person.notes,
+        storyText(person),
+        ...(person.aliases || []),
+        ...(person.tags || []),
+        ...profileSources(person).flatMap((source) => [
+          source.label,
+          source.title,
+          source.repository,
+          source.type,
+          source.confidence,
+        ]),
+      ].join(" ").toLowerCase(),
+      name: person.name.toLowerCase(),
+      aliases: (person.aliases || []).map((alias) => alias.toLowerCase()),
+      sortKey: surnameSortKey(person.name),
+    }));
+  }
+  return state.searchIndex;
+}
+
+function searchEntryRank(entry, term) {
+  if (entry.name.startsWith(term)) return 0;
+  if (entry.name.split(/\s+/).some((word) => word.startsWith(term))) return 1;
+  if (entry.name.includes(term)) return 2;
+  if (entry.aliases.some((alias) => alias.includes(term))) return 3;
+  return 4;
 }
 
 // Directory browse order groups families together: sort by surname, then the
@@ -530,6 +600,8 @@ function searchMatchReason(person, term) {
     ["Death date", person.death?.date],
     ["Notes", person.notes],
     ["Life story", storyText(person)],
+    ["Source", profileSources(person).map((source) =>
+      [source.label, source.title, source.repository, source.type, source.confidence].filter(Boolean).join(" ")).join(" ")],
   ];
   for (const [field, text] of fields) {
     const value = String(text || "");
@@ -643,7 +715,7 @@ function renderDetails() {
       person.birth?.place ? metaPill(`Born ${person.birth.place}`) : null,
       person.death?.place ? metaPill(`Died ${person.death.place}`) : null,
       age ? metaPill(age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
-      sources.length ? metaPill(`${sources.length} source${sources.length === 1 ? "" : "s"}`) : null,
+      sources.length ? evidencePill(sources, person) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
       ...researchStatusPills(person),
     ].filter(Boolean),
@@ -1331,6 +1403,63 @@ function sourceRepositoryName(url) {
   return known ? known[1] : host.replace(/^www\./, "");
 }
 
+function sourceQuality(source) {
+  const repository = source.repository || sourceRepositoryName(source.url);
+  const text = [
+    source.type,
+    source.confidence,
+    source.label,
+    source.title,
+    source.repository,
+    repository,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/conflict|disputed|contradict/i.test(text)) return { key: "conflict", label: "Conflict", className: "source-quality-conflict" };
+  if (/photo|image/.test(text)) return { key: "photo", label: "Photo", className: "source-quality-photo" };
+  if (/find a grave|billiongraves|memorial|cemetery|grave/.test(text)) return { key: "memorial", label: "Memorial", className: "source-quality-memorial" };
+  if (/index|kdla|sortedbyname|death file|birls/.test(text)) return { key: "index", label: "Index", className: "source-quality-index" };
+  if (/tree lead|compiled|family tree|familysearch public|wikitree|fgs project|lead only/.test(text)) {
+    return { key: "lead", label: "Lead", className: "source-quality-lead" };
+  }
+  if (/census|certificate|marriage|draft|record|obituary|legacy|newspaper|archives|nara|national archives/.test(text)) {
+    return { key: "record", label: "Record", className: "source-quality-record" };
+  }
+  return { key: "source", label: "Source", className: "source-quality-source" };
+}
+
+function evidenceSummary(sources, person) {
+  const counts = new Map();
+  for (const source of sources) {
+    const quality = sourceQuality(source);
+    counts.set(quality.key, (counts.get(quality.key) || 0) + 1);
+  }
+  const attention = (person.tags || []).some((tag) => tagStatusTone(tag) === "status-attention");
+  if (attention && !counts.has("conflict")) counts.set("conflict", 1);
+  const parts = [
+    ["record", "record"],
+    ["index", "index"],
+    ["memorial", "memorial"],
+    ["lead", "lead"],
+    ["conflict", "conflict"],
+  ].flatMap(([key, label]) => {
+    const count = counts.get(key) || 0;
+    return count ? [`${count} ${label}${count === 1 ? "" : "s"}`] : [];
+  });
+  return parts.length ? parts.join(" · ") : `${sources.length} source${sources.length === 1 ? "" : "s"}`;
+}
+
+function evidencePill(sources, person) {
+  const hasConflict = (person.tags || []).some((tag) => tagStatusTone(tag) === "status-attention")
+    || sources.some((source) => sourceQuality(source).key === "conflict");
+  const hasLead = (person.tags || []).some((tag) => tagStatusTone(tag) === "status-lead")
+    || sources.some((source) => sourceQuality(source).key === "lead");
+  const pill = metaPill(evidenceSummary(sources, person), hasConflict ? "status-attention" : hasLead ? "status-lead" : "status-verified", () => {
+    state.sourcesExpanded = true;
+    renderDetails();
+  });
+  pill.title = "Open source details";
+  return pill;
+}
+
 function cleanSourceLabel(label, repository) {
   if (!label || !repository) return label || "";
   const stripped = label.replace(
@@ -1342,7 +1471,8 @@ function cleanSourceLabel(label, repository) {
 
 function renderSourceItem(source, eventYear = null) {
   const item = document.createElement(source.url ? "a" : "div");
-  item.className = `source-item ${source.type ? `source-${source.type}` : ""}`;
+  const quality = sourceQuality(source);
+  item.className = `source-item ${quality.className} ${source.type ? `source-${source.type}` : ""}`;
   if (source.url) {
     item.href = source.url;
     item.target = "_blank";
@@ -1358,6 +1488,10 @@ function renderSourceItem(source, eventYear = null) {
     badge.textContent = repository;
     heading.append(badge);
   }
+  const qualityBadge = document.createElement("span");
+  qualityBadge.className = `source-badge ${quality.className}`;
+  qualityBadge.textContent = quality.label;
+  heading.append(qualityBadge);
   const title = document.createElement("span");
   title.className = "source-title";
   title.textContent = cleanSourceLabel(source.label || source.title, repository) || source.url;
@@ -1892,35 +2026,35 @@ function hiddenChildIds(personId, visible, index) {
 function expandChildren(personId) {
   state.expandedChildren.add(personId);
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
 function collapseChildren(personId) {
   state.expandedChildren.delete(personId);
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
 function expandSiblings(personId) {
   state.expandedSiblings.add(personId);
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
 function collapseSiblings(personId) {
   state.expandedSiblings.delete(personId);
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
 function expandParents(personId) {
   state.expandedAncestors.add(personId);
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
@@ -1937,7 +2071,7 @@ function expandAncestorBranch(personId) {
     queue.push(...(index.get(id)?.parents || []), ...(index.get(id)?.spouses || []));
   }
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
@@ -1945,7 +2079,7 @@ function collapseParents(personId) {
   // Deeper expansions are kept so re-expanding restores the branch as it was.
   state.expandedAncestors.delete(personId);
   saveViewState();
-  fitTree();
+  fitTree({ renderNow: false });
   render();
 }
 
@@ -2840,9 +2974,9 @@ function selectPerson(id, reroot = true, openProfile = true) {
   if (reroot) {
     state.rootId = id;
     resetExpandedAncestors();
-    fitTree();
+    fitTree({ renderNow: false });
   } else if (state.collapseCollateral && revealAncestorPath(id)) {
-    fitTree();
+    fitTree({ renderNow: false });
   } else {
     ensurePersonVisible(id);
   }
@@ -2934,7 +3068,7 @@ function ensurePersonVisible(id) {
   state.offsetY = height / 2 - node.y * state.scale;
 }
 
-function fitTree() {
+function fitTree({ renderNow = true } = {}) {
   const index = relationshipIndex();
   const root = personById(state.rootId);
   const visibleIds = root && state.collapseCollateral ? expandedTreeIds(root.id, index) : null;
@@ -2948,7 +3082,7 @@ function fitTree() {
   state.scale = Math.min(1, Math.max(0.34, Math.min(scaleX, scaleY)));
   state.offsetX = (width - bounds.width * state.scale) / 2 - bounds.minX * state.scale;
   state.offsetY = (height - bounds.height * state.scale) / 2 - bounds.minY * state.scale;
-  renderTree();
+  if (renderNow) renderTree();
 }
 
 function fitTreeAfterLayout() {
@@ -3094,7 +3228,10 @@ function importedPeopleSummary(data, priorIds) {
 
 async function loadFamilyFile(file) {
   try {
+    renderDataStatus(`Loading ${file.name}...`, "neutral");
+    await afterNextPaint();
     const text = await file.text();
+    await afterNextPaint();
     const data = JSON.parse(text);
     validateData(data);
     const prior = state.data
@@ -3108,15 +3245,21 @@ async function loadFamilyFile(file) {
         }
       : null;
     const priorIds = state.data ? new Set(state.data.people.map((person) => person.id)) : null;
-    state.hasStoredData = storeData(data);
     adoptData(data, preservedPlace(prior, data));
     const summary = importedPeopleSummary(data, priorIds);
     renderDataStatus(
-      state.hasStoredData
-        ? `Loaded ${summary} from ${file.name}. Saved in this browser only; nothing is uploaded.`
-        : `Loaded ${summary} from ${file.name}. Could not save in this browser, so re-import next visit. Nothing was uploaded.`,
+      `Loaded ${summary} from ${file.name}. Saving a browser-only copy...`,
       "success",
     );
+    scheduleStoreData(data, (stored) => {
+      state.hasStoredData = stored;
+      renderDataStatus(
+        stored
+          ? `Loaded ${summary} from ${file.name}. Saved in this browser only; nothing is uploaded.`
+          : `Loaded ${summary} from ${file.name}. Could not save in this browser, so re-import next visit. Nothing was uploaded.`,
+        stored ? "success" : "error",
+      );
+    });
   } catch (error) {
     renderDataStatus(`Could not load ${file.name}: ${error.message}`, "error");
   }
@@ -3226,12 +3369,51 @@ function validateData(data) {
   if (!data || !Array.isArray(data.people) || data.people.length === 0) {
     throw new Error("Family JSON must include a non-empty people array.");
   }
-  const ids = new Set(data.people.map((person) => person.id));
+  const ids = new Set();
   for (const person of data.people) {
-    if (!person.id || !person.name) throw new Error("Each person needs an id and name.");
+    if (!person || typeof person !== "object" || Array.isArray(person)) {
+      throw new Error("Each person must be an object.");
+    }
+    if (!person.id || typeof person.id !== "string" || !person.name || typeof person.name !== "string") {
+      throw new Error("Each person needs a string id and name.");
+    }
+    if (ids.has(person.id)) throw new Error(`Duplicate person id: ${person.id}`);
+    ids.add(person.id);
+  }
+  if (data.meta?.defaultPersonId && !ids.has(data.meta.defaultPersonId)) {
+    throw new Error(`Default person id is missing: ${data.meta.defaultPersonId}`);
+  }
+  for (const person of data.people) {
     for (const key of ["parents", "spouses", "children"]) {
+      if (person[key] !== undefined && !Array.isArray(person[key])) {
+        throw new Error(`${person.name} ${key} must be an array.`);
+      }
       for (const id of person[key] || []) {
+        if (typeof id !== "string") throw new Error(`${person.name} has a non-string ${key} id.`);
         if (!ids.has(id)) throw new Error(`${person.name} references missing ${key} id: ${id}`);
+      }
+    }
+    validateProfileEntries(person, "photos", [...(person.photos || []), ...(person.profile?.photos || [])]);
+    validateProfileEntries(person, "sources", [...(person.sources || []), ...(person.profile?.sources || [])]);
+    validateProfileEntries(person, "obituaries", [...(person.obituaries || []), ...(person.profile?.obituaries || [])]);
+  }
+}
+
+function validateProfileEntries(person, key, entries) {
+  const rootValue = person[key];
+  const profileValue = person.profile?.[key];
+  if (rootValue !== undefined && !Array.isArray(rootValue)) throw new Error(`${person.name} ${key} must be an array.`);
+  if (profileValue !== undefined && !Array.isArray(profileValue)) throw new Error(`${person.name} profile.${key} must be an array.`);
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error(`${person.name} has a malformed ${key} entry.`);
+    }
+    if (key === "photos" && (entry.url === undefined || typeof entry.url !== "string" || !entry.url)) {
+      throw new Error(`${person.name} has a photo without a URL.`);
+    }
+    for (const field of ["label", "title", "url", "repository", "type", "confidence", "date", "publication", "excerpt"]) {
+      if (entry[field] !== undefined && typeof entry[field] !== "string") {
+        throw new Error(`${person.name} has a ${key} entry with non-string ${field}.`);
       }
     }
   }
@@ -3905,6 +4087,7 @@ export const __test = {
   HELP_TIPS,
   renderHelpTips,
   personLink,
+  validateData,
   adoptData,
   preservedPlace,
   importedPeopleSummary,
