@@ -1025,7 +1025,8 @@ function renderTimeline(person) {
   list.className = "timeline-list";
   for (const event of events) {
     const item = document.createElement("li");
-    item.className = "timeline-item";
+    const typeClass = event.record ? "record" : event.rank === 0 ? "birth" : event.rank === 2 ? "death" : "relative";
+    item.className = `timeline-item timeline-item--${typeClass}`;
 
     const year = document.createElement("span");
     year.className = "timeline-year";

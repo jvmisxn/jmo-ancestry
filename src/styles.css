@@ -1381,6 +1381,17 @@ button.timeline-label:focus-visible {
   line-height: 1.35;
 }
 
+/* Source records in the timeline get a subtly muted left rail and dimmer
+   label so they read as documentary evidence rather than lived events. */
+.timeline-item--record .timeline-body {
+  border-left-color: var(--accent);
+  opacity: 0.8;
+}
+
+.timeline-item--record .timeline-label {
+  font-weight: 500;
+}
+
 .relation-item {
   gap: 4px;
 }
