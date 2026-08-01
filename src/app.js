@@ -713,8 +713,8 @@ function renderDetails() {
   els.detailMeta.replaceChildren(
     ...[
       metaPill(formatYears(person) || "Dates pending"),
-      person.birth?.place ? metaPill(`Born ${person.birth.place}`) : null,
-      person.death?.place ? metaPill(`Died ${person.death.place}`) : null,
+      person.birth?.place ? placeSearchPill("Born", person.birth.place) : null,
+      person.death?.place ? placeSearchPill("Died", person.death.place) : null,
       age ? metaPill(age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
       sources.length ? evidencePill(sources, person) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
@@ -1446,6 +1446,12 @@ function evidenceSummary(sources, person) {
     return count ? [`${count} ${label}${count === 1 ? "" : "s"}`] : [];
   });
   return parts.length ? parts.join(" · ") : `${sources.length} source${sources.length === 1 ? "" : "s"}`;
+}
+
+function placeSearchPill(prefix, place) {
+  const pill = metaPill(`${prefix} ${place}`, "", () => searchByTag(place));
+  pill.title = `Find others from ${place}`;
+  return pill;
 }
 
 function evidencePill(sources, person) {
