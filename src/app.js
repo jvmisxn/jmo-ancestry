@@ -239,7 +239,8 @@ async function init() {
   });
   els.toggleSources.addEventListener("click", () => {
     state.sourcesExpanded = !state.sourcesExpanded;
-    renderDetails();
+    els.sourcesPanel.hidden = !state.sourcesExpanded;
+    els.toggleSources.setAttribute("aria-expanded", String(state.sourcesExpanded));
   });
   els.viewport.addEventListener("wheel", onZoom, { passive: false });
   enableDrag();
