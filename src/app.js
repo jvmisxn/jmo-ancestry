@@ -752,11 +752,34 @@ function renderDetails() {
       }
     }
   }
+
+  // For each spouse, count shared children (children who list both people as
+  // parents) and append that tally to the spouse's meta line. Lets a reader
+  // know at a glance which union produced which family, especially when the
+  // person had children by more than one partner.
+  let spouseNoteById = null;
+  if (relations.spouses.length) {
+    spouseNoteById = new Map();
+    for (const spouseId of relations.spouses) {
+      const sharedCount = relations.children.filter((childId) => {
+        const child = personById(childId);
+        return (child?.parents || []).includes(spouseId);
+      }).length;
+      if (sharedCount > 0) {
+        const spouse = personById(spouseId);
+        const baseMeta = personListMeta(spouse);
+        const childNote = `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together`;
+        spouseNoteById.set(spouseId, [baseMeta, childNote].filter(Boolean).join(" · "));
+      }
+    }
+    if (!spouseNoteById.size) spouseNoteById = null;
+  }
+
   const relationItems = [
     ...linkGroup("Parents", relations.parents),
     ...linkGroup("Siblings", relations.siblings),
     ...linkGroup("Half-siblings", relations.halfSiblings),
-    ...linkGroup("Spouses", relations.spouses),
+    ...linkGroup("Spouses", relations.spouses, spouseNoteById),
     ...linkGroup("Children", relations.children, childNoteById),
   ];
   els.relationsHeading.textContent = `Relationships (${relationTotal})`;
