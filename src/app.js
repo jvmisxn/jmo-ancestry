@@ -1658,8 +1658,18 @@ function renderTree() {
     if (state.collapseCollateral && hiddenParents > 0) {
       const above = hiddenAncestorsAbove(node.person.id, visibleIdSet, index);
       const deepBranch = above > hiddenParents;
+      const hiddenParentIds = parentIds.filter((id) => !visibleParentIds.includes(id));
+      const hiddenParentFirstNames = hiddenParentIds.map((id) => givenName(personById(id)?.name)).filter(Boolean);
+      const parentNameStr = hiddenParentFirstNames.length === 1
+        ? hiddenParentFirstNames[0]
+        : hiddenParentFirstNames.length === 2
+          ? `${hiddenParentFirstNames[0]} & ${hiddenParentFirstNames[1]}`
+          : "";
+      const baseLabel = hiddenParents === 1
+        ? (parentNameStr ? `Show parent: ${parentNameStr}` : "Show parent")
+        : (parentNameStr ? `Show parents: ${parentNameStr}` : "Show parents");
       g.append(ancestorToggle(node, {
-        label: deepBranch ? `Show parents · ${above} above` : `Show parent${hiddenParents === 1 ? "" : "s"}`,
+        label: deepBranch ? `${baseLabel} · ${above} above` : baseLabel,
         ariaLabel: deepBranch
           ? `Show parents of ${node.person.name} (${above} hidden ancestors above, shift-click to reveal all)`
           : `Show parents of ${node.person.name}`,
