@@ -866,17 +866,26 @@ function lifeTimeline(person, index = relationshipIndex()) {
     events.push({ year: birthYear, rank: 0, label: "Born", detail: formatEvent(person.birth) });
   }
 
+  const personSpouses = index.get(person.id)?.spouses || new Set();
   for (const childId of orderedChildren([person.id], index)) {
     const child = personById(childId);
     const year = numericYear(child?.birth?.date);
     if (year === null) continue;
     const age = birthYear !== null && year >= birthYear ? year - birthYear : null;
+    const otherParentId = personSpouses.size > 1
+      ? (child.parents || []).find((pid) => pid !== person.id && personSpouses.has(pid))
+      : null;
+    const otherParent = otherParentId ? personById(otherParentId) : null;
     events.push({
       year,
       rank: 1,
       personId: childId,
       label: `${child.name} born`,
-      detail: [age !== null ? `around age ${age}` : "", child.birth?.place || ""].filter(Boolean).join(" · "),
+      detail: [
+        age !== null ? `around age ${age}` : "",
+        otherParent ? `with ${givenName(otherParent.name)}` : "",
+        child.birth?.place || "",
+      ].filter(Boolean).join(" · "),
     });
   }
 
