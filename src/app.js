@@ -3884,7 +3884,6 @@ function personListMeta(person) {
     person.birth?.place,
     person.death?.place ? `Died in ${person.death.place}` : "",
     person.aliases?.length ? `AKA ${person.aliases[0]}` : "",
-    person.notes ? truncate(person.notes, 72) : "",
   ].filter(Boolean);
   return details.slice(0, 2).join(" • ");
 }
