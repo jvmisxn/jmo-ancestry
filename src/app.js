@@ -3487,12 +3487,17 @@ function renderPersonRow(person, term = "") {
 
   const body = document.createElement("span");
   body.className = "person-row-body";
+  const root = personById(state.rootId);
+  const kinship = root && person.id !== state.rootId ? kinshipLabel(person.id, state.rootId) : "";
+  const kinshipNote = kinship ? `${givenName(root.name)}'s ${kinship}` : "";
+  const placeNote = personListMeta(person);
+  const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "No date or place details yet.";
   body.innerHTML = `
     <span class="person-row-main">
       <span class="person-row-name">${escapeHtml(person.name)}</span>
       <small class="person-row-years">${escapeHtml(formatYears(person) || "")}</small>
     </span>
-    <small class="person-row-meta">${escapeHtml(personListMeta(person) || "No date or place details yet.")}</small>
+    <small class="person-row-meta">${escapeHtml(meta)}</small>
   `;
 
   const reason = searchMatchReason(person, term);
