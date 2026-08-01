@@ -3480,6 +3480,11 @@ function linkGroup(label, ids = []) {
   if (!ids.length) return [];
   const heading = document.createElement("h3");
   heading.textContent = label;
+  const root = personById(state.rootId);
+  // Show each relation's kinship to the tree focus when the selected profile is
+  // someone other than the focus — mirrors the directory's kinship column so
+  // navigating from a distant relative's profile doesn't require mental bookkeeping.
+  const showKinship = root && state.selectedId !== state.rootId;
   return [
     heading,
     ...ids.map((id) => {
@@ -3487,12 +3492,23 @@ function linkGroup(label, ids = []) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "relation-item";
+      let kinshipNote = "";
+      if (showKinship) {
+        if (id === state.rootId) {
+          kinshipNote = "Tree focus";
+        } else {
+          const kinship = kinshipLabel(id, root.id);
+          if (kinship) kinshipNote = `${givenName(root.name)}'s ${kinship}`;
+        }
+      }
+      const placeNote = personListMeta(person);
+      const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "Open profile";
       button.innerHTML = `
         <span class="relation-name">
           <strong>${escapeHtml(person?.name || id)}</strong>
           <small>${escapeHtml(formatYears(person || {}))}</small>
         </span>
-        <small class="relation-meta">${escapeHtml(personListMeta(person) || "Open profile")}</small>
+        <small class="relation-meta">${escapeHtml(meta)}</small>
       `;
       button.addEventListener("click", () => {
         selectPerson(id, false, true);
