@@ -1625,6 +1625,10 @@ function extractCensusLocation(label) {
   return location.length >= 4 ? location : null;
 }
 
+// Returns an array of paragraph strings so renderLifeStory presents each
+// phase of the generated story as its own paragraph rather than one dense
+// block. Grouped as: origin (birth + parents), marriage, family life
+// (children + census), and death.
 function generatedLifeStory(person) {
   const index = relationshipIndex();
   const years = formatYears(person);
@@ -1636,20 +1640,29 @@ function generatedLifeStory(person) {
   const childIds = orderedChildren([person.id], index);
   const given = givenName(person.name);
   const intro = `${person.name}${years ? ` (${years})` : ""}`;
-  const parts = [];
 
-  parts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
-  if (parents.length) parts.push(`${given} was the child of ${formatNameList(parents)}.`);
+  const paragraphs = [];
+
+  // Para 1: origin — birth fact and parentage
+  const originParts = [];
+  originParts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
+  if (parents.length) originParts.push(`${given} was the child of ${formatNameList(parents)}.`);
+  paragraphs.push(originParts.join(" "));
+
+  // Para 2: marriage(s)
   if (spouseNames.length === 1) {
-    parts.push(`${given} married ${spouseNames[0]}.`);
+    paragraphs.push(`${given} married ${spouseNames[0]}.`);
   } else if (spouseNames.length > 1) {
-    parts.push(`${given} was married to ${formatNameList(spouseNames)}.`);
+    paragraphs.push(`${given} was married to ${formatNameList(spouseNames)}.`);
   }
+
+  // Para 3: children and census records — documentary evidence of family life
+  const familyParts = [];
   if (childIds.length > 4) {
     const firstNames = namesForIds(childIds.slice(0, 3));
-    parts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}.`);
+    familyParts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}.`);
   } else if (childIds.length > 0) {
-    parts.push(`Known children include ${formatNameList(namesForIds(childIds))}.`);
+    familyParts.push(`Known children include ${formatNameList(namesForIds(childIds))}.`);
   }
 
   // Add census context derived from attached sources — turns documentary
@@ -1675,24 +1688,26 @@ function generatedLifeStory(person) {
   if (censusYears.length === 1) {
     const loc = censusYearMap.get(censusYears[0]);
     const locStr = loc ? ` in ${loc}` : "";
-    parts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}.`);
+    familyParts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}.`);
   } else if (censusYears.length >= 2) {
     const last = censusYears[censusYears.length - 1];
     const rest = censusYears.slice(0, -1);
     const locations = [...new Set(censusYears.map((y) => censusYearMap.get(y)).filter(Boolean))];
     if (locations.length === 1) {
-      parts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last} in ${locations[0]}.`);
+      familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last} in ${locations[0]}.`);
     } else {
-      parts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
+      familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
     }
   }
+  if (familyParts.length) paragraphs.push(familyParts.join(" "));
 
+  // Para 4: death
   if (death) {
     const ageStr = age ? (age.approx ? `, about age ${age.years}` : `, aged ${age.years}`) : "";
-    parts.push(`${given} died ${death}${ageStr}.`);
+    paragraphs.push(`${given} died ${death}${ageStr}.`);
   }
 
-  return parts.join(" ");
+  return paragraphs;
 }
 
 function profilePhotos(person) {
