@@ -893,7 +893,7 @@ function renderDetails() {
   );
 
   const sourceItems = chronologicalSources(sources, person)
-    .map(({ source, year }) => renderSourceItem(source, year));
+    .map(({ source, year }) => renderSourceItem(source, year, personBirthYear));
   els.sourcesHeading.textContent = `Sources (${sourceItems.length})`;
   els.toggleSources.hidden = sourceItems.length === 0;
   els.toggleSources.textContent = `Sources${sourceItems.length ? ` (${sourceItems.length})` : ""}`;
@@ -1877,7 +1877,7 @@ function cleanSourceLabel(label, repository) {
   return stripped || label;
 }
 
-function renderSourceItem(source, eventYear = null) {
+function renderSourceItem(source, eventYear = null, birthYear = null) {
   const item = document.createElement(source.url ? "a" : "div");
   const quality = sourceQuality(source);
   item.className = `source-item ${quality.className} ${source.type ? `source-${source.type}` : ""}`;
@@ -1909,10 +1909,17 @@ function renderSourceItem(source, eventYear = null) {
   // The repository already shows as the badge, so the meta line only carries
   // what the badge cannot: dates, publication names, and confidence notes.
   // A year lifted out of the label makes the panel's chronological order
-  // visible; an explicit date already carries that signal itself.
-  const meta = [source.date || eventYear, source.publication, source.confidence]
+  // visible; an explicit date already carries that signal itself. When both
+  // a resolvable event year and the person's birth year are known, append
+  // "age N" so the reader gets instant context without doing mental math.
+  const resolvedYear = numericYear(source.date) ?? eventYear;
+  const recordAge = (resolvedYear !== null && birthYear !== null)
+    ? resolvedYear - birthYear
+    : null;
+  const ageStr = (recordAge !== null && recordAge > 0 && recordAge < 120) ? `age ${recordAge}` : null;
+  const meta = [source.date || eventYear, ageStr, source.publication, source.confidence]
     .filter(Boolean)
-    .join(" - ");
+    .join(" · ");
   if (meta) {
     const small = document.createElement("small");
     small.className = "source-meta";
