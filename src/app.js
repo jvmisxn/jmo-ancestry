@@ -952,6 +952,26 @@ function lifeTimeline(person, index = relationshipIndex()) {
         detail: [half ? "half-sibling" : "sibling", age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
       });
     }
+
+    // Siblings who died within this person's lifetime — shows when a brother
+    // or sister was lost, adding emotional context alongside sibling births.
+    for (const siblingId of orderedChildren(personParentIds, index)) {
+      if (siblingId === person.id) continue;
+      const sibling = personById(siblingId);
+      const year = numericYear(sibling?.death?.date);
+      if (year === null) continue;
+      if (birthYear !== null && year < birthYear) continue;
+      if (deathYear !== null && year > deathYear) continue;
+      const age = birthYear !== null ? year - birthYear : null;
+      const half = isHalfSiblingPair(person.id, siblingId, index);
+      events.push({
+        year,
+        rank: 1,
+        personId: siblingId,
+        label: `${sibling.name} died`,
+        detail: [half ? "half-sibling" : "sibling", age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
+      });
+    }
   }
 
   for (const { ids, role } of [
