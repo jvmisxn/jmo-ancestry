@@ -1381,6 +1381,29 @@ button.timeline-label:focus-visible {
   line-height: 1.35;
 }
 
+/* Birth and death milestones get a thicker, more prominent rail so they
+   visually anchor the timeline — relative and record events stay subordinate. */
+.timeline-item--birth .timeline-body,
+.timeline-item--death .timeline-body {
+  border-left-width: 3px;
+}
+
+.timeline-item--birth .timeline-body {
+  border-left-color: var(--green);
+}
+
+.timeline-item--birth .timeline-year {
+  color: var(--green);
+}
+
+.timeline-item--death .timeline-body {
+  border-left-color: var(--muted-strong);
+}
+
+.timeline-item--death .timeline-year {
+  color: var(--muted-strong);
+}
+
 /* Source records in the timeline get a subtly muted left rail and dimmer
    label so they read as documentary evidence rather than lived events. */
 .timeline-item--record .timeline-body {
