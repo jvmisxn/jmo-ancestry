@@ -763,6 +763,8 @@ function renderDetails() {
       }
       const childBirthYear = yearLabel(child?.birth?.date);
       if (childBirthYear) parts.push(`b. ${childBirthYear}`);
+      const childDeathYear = yearLabel(child?.death?.date);
+      if (childDeathYear) parts.push(`d. ${childDeathYear}`);
       const placeMeta = personListMeta(child);
       if (placeMeta) parts.push(placeMeta);
       map.set(childId, parts.join(" · "));
@@ -784,9 +786,11 @@ function renderDetails() {
       }).length;
       const spouseYearLabel = yearLabel(spouse?.birth?.date);
       const yearNote = spouseYearLabel ? `b. ${spouseYearLabel}` : "";
+      const spouseDeathYearLabel = yearLabel(spouse?.death?.date);
+      const deathNote = spouseDeathYearLabel ? `d. ${spouseDeathYearLabel}` : "";
       const baseMeta = personListMeta(spouse);
       const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
-      spouseNoteById.set(spouseId, [yearNote, baseMeta, childNote].filter(Boolean).join(" · "));
+      spouseNoteById.set(spouseId, [yearNote, deathNote, baseMeta, childNote].filter(Boolean).join(" · "));
     }
   }
 
@@ -806,7 +810,9 @@ function renderDetails() {
         orderLabel = sibYear < personBirthYear ? `Older ${type}` : sibYear > personBirthYear ? `Younger ${type}` : "Same birth year";
       }
       const yearNote = sibYearLabel ? `b. ${sibYearLabel}` : "";
-      const note = [orderLabel, yearNote, placeMeta].filter(Boolean).join(" · ");
+      const sibDeathYearLabel = yearLabel(sib?.death?.date);
+      const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}` : "";
+      const note = [orderLabel, yearNote, deathNote, placeMeta].filter(Boolean).join(" · ");
       if (note) map.set(sibId, note);
     }
     return map.size ? map : null;
