@@ -1006,7 +1006,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       if (birthYear !== null && year < birthYear) continue;
       if (deathYear !== null && year > deathYear) continue;
       const age = birthYear !== null ? year - birthYear : null;
-      const relativeBirthYear = role === "child" ? numericYear(relative?.birth?.date) : null;
+      const relativeBirthYear = numericYear(relative?.birth?.date);
       const relativeAgeAtDeath = relativeBirthYear !== null ? year - relativeBirthYear : null;
       events.push({
         year,
