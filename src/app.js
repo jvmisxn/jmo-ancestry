@@ -816,15 +816,24 @@ function renderDetails() {
 
   // For each parent, show how old they were when this person was born — gives
   // generational context at a glance without opening the parent's profile.
+  // Falls back to the parent's birth year when the age cannot be computed,
+  // keeping parents consistent with siblings and spouses (which always show b. YYYY).
   let parentNoteById = null;
-  if (personBirthYear !== null && relations.parents.length) {
+  if (relations.parents.length) {
     const map = new Map();
     for (const parentId of relations.parents) {
       const parent = personById(parentId);
       const py = numericYear(parent?.birth?.date);
-      if (py !== null) {
+      const parentYearLabel = yearLabel(parent?.birth?.date);
+      if (py !== null && personBirthYear !== null) {
         const parentAge = personBirthYear - py;
-        if (parentAge >= 12 && parentAge <= 80) map.set(parentId, `Age ${parentAge} when ${givenName(person.name)} was born`);
+        if (parentAge >= 12 && parentAge <= 80) {
+          map.set(parentId, `Age ${parentAge} when ${givenName(person.name)} was born`);
+        } else if (parentYearLabel) {
+          map.set(parentId, `b. ${parentYearLabel}`);
+        }
+      } else if (parentYearLabel) {
+        map.set(parentId, `b. ${parentYearLabel}`);
       }
     }
     if (map.size) parentNoteById = map;
