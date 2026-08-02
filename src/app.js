@@ -794,7 +794,7 @@ function renderDetails() {
   // the current person so birth order is visible without opening each profile.
   // Falls back to place meta when neither birth year is known.
   const personBirthYear = numericYear(person.birth?.date);
-  function siblingNoteMap(ids) {
+  function siblingNoteMap(ids, type = "sibling") {
     const map = new Map();
     for (const sibId of ids) {
       const sib = personById(sibId);
@@ -803,7 +803,7 @@ function renderDetails() {
       const placeMeta = personListMeta(sib);
       let orderLabel = "";
       if (personBirthYear !== null && sibYear !== null) {
-        orderLabel = sibYear < personBirthYear ? "Older sibling" : sibYear > personBirthYear ? "Younger sibling" : "Same birth year";
+        orderLabel = sibYear < personBirthYear ? `Older ${type}` : sibYear > personBirthYear ? `Younger ${type}` : "Same birth year";
       }
       const yearNote = sibYearLabel ? `b. ${sibYearLabel}` : "";
       const note = [orderLabel, yearNote, placeMeta].filter(Boolean).join(" · ");
@@ -812,7 +812,7 @@ function renderDetails() {
     return map.size ? map : null;
   }
   const siblingNoteById = siblingNoteMap(relations.siblings);
-  const halfSiblingNoteById = siblingNoteMap(relations.halfSiblings);
+  const halfSiblingNoteById = siblingNoteMap(relations.halfSiblings, "half-sibling");
 
   // For each parent, show how old they were when this person was born — gives
   // generational context at a glance without opening the parent's profile.
@@ -824,7 +824,7 @@ function renderDetails() {
       const py = numericYear(parent?.birth?.date);
       if (py !== null) {
         const parentAge = personBirthYear - py;
-        if (parentAge >= 12 && parentAge <= 80) map.set(parentId, `Age ${parentAge} at your birth`);
+        if (parentAge >= 12 && parentAge <= 80) map.set(parentId, `Age ${parentAge} when ${givenName(person.name)} was born`);
       }
     }
     if (map.size) parentNoteById = map;
