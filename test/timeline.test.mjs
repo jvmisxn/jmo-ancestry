@@ -88,7 +88,7 @@ check("undated child and undated source excluded", events.some((e) => /No Dates|
 check("parent death before person's birth excluded", events.some((e) => e.label === "Father Example died"), false);
 check("parent-loss event carries role + age", events.find((e) => e.label === "Mother Example died")?.detail, "parent · around age 32");
 check("spouse-loss event links to the spouse", events.find((e) => e.label === "Spouse Example died")?.personId, "spouse");
-check("child-loss event carries role + age", events.find((e) => e.label === "Ada Junior died")?.detail, "child · around age 52");
+check("child-loss event carries child age + parent age", events.find((e) => e.label === "Ada Junior died")?.detail, "child · aged 27 · around age 52");
 check("child death after person's own death excluded", events.some((e) => e.label === "Ben Example died"), false);
 check("record keeps its link", events.find((e) => e.record)?.url, "https://example.com/census-1900");
 check("in-lifetime record carries person's age", events.find((e) => e.label === "1900 United States Census")?.detail, "around age 20");

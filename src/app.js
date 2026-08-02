@@ -966,12 +966,18 @@ function lifeTimeline(person, index = relationshipIndex()) {
       if (deathYear !== null && year > deathYear) continue;
       const age = birthYear !== null ? year - birthYear : null;
       const half = isHalfSiblingPair(person.id, siblingId, index);
+      const siblingBirthYear = numericYear(sibling?.birth?.date);
+      const siblingAgeAtDeath = siblingBirthYear !== null ? year - siblingBirthYear : null;
       events.push({
         year,
         rank: 1,
         personId: siblingId,
         label: `${sibling.name} died`,
-        detail: [half ? "half-sibling" : "sibling", age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
+        detail: [
+          half ? "half-sibling" : "sibling",
+          siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
+          age !== null ? `around age ${age}` : "",
+        ].filter(Boolean).join(" · "),
       });
     }
   }
@@ -988,12 +994,18 @@ function lifeTimeline(person, index = relationshipIndex()) {
       if (birthYear !== null && year < birthYear) continue;
       if (deathYear !== null && year > deathYear) continue;
       const age = birthYear !== null ? year - birthYear : null;
+      const relativeBirthYear = role === "child" ? numericYear(relative?.birth?.date) : null;
+      const relativeAgeAtDeath = relativeBirthYear !== null ? year - relativeBirthYear : null;
       events.push({
         year,
         rank: 1,
         personId: relativeId,
         label: `${relative.name} died`,
-        detail: [role, age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
+        detail: [
+          role,
+          relativeAgeAtDeath !== null ? `aged ${relativeAgeAtDeath}` : "",
+          age !== null ? `around age ${age}` : "",
+        ].filter(Boolean).join(" · "),
       });
     }
   }
