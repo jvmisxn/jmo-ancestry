@@ -1645,8 +1645,9 @@ function generatedLifeStory(person) {
   } else if (spouseNames.length > 1) {
     parts.push(`${given} was married to ${formatNameList(spouseNames)}.`);
   }
-  if (childIds.length > 3) {
-    parts.push(`${given} had ${childIds.length} children.`);
+  if (childIds.length > 4) {
+    const firstNames = namesForIds(childIds.slice(0, 3));
+    parts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}.`);
   } else if (childIds.length > 0) {
     parts.push(`Known children include ${formatNameList(namesForIds(childIds))}.`);
   }
