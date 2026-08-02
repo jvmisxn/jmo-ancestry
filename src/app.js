@@ -3718,7 +3718,7 @@ function tagListFact(person) {
 function linkGroup(label, ids = [], noteById = null) {
   if (!ids.length) return [];
   const heading = document.createElement("h3");
-  heading.textContent = label;
+  heading.textContent = `${label} (${ids.length})`;
   const root = personById(state.rootId);
   // Show each relation's kinship to the tree focus when the selected profile is
   // someone other than the focus — mirrors the directory's kinship column so
