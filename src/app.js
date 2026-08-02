@@ -1044,12 +1044,32 @@ function lifeTimeline(person, index = relationshipIndex()) {
 
   if (deathYear !== null) {
     const age = ageAtDeath(person);
+    // Count children and spouses who outlived this person (no recorded death, or
+    // died in a year strictly after this person's death year).
+    const survivingChildren = [...(index.get(person.id)?.children || [])].filter((id) => {
+      const child = personById(id);
+      const childDeath = numericYear(child?.death?.date);
+      return childDeath === null || childDeath > deathYear;
+    });
+    const survivingSpouses = [...(index.get(person.id)?.spouses || [])].filter((id) => {
+      const spouse = personById(id);
+      const spouseDeath = numericYear(spouse?.death?.date);
+      return spouseDeath === null || spouseDeath > deathYear;
+    });
+    const survivedBy = [];
+    if (survivingChildren.length === 1) survivedBy.push("1 child");
+    else if (survivingChildren.length > 1) survivedBy.push(`${survivingChildren.length} children`);
+    if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
+    else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     events.push({
       year: deathYear,
       rank: 2,
       label: "Died",
-      detail: [formatEvent(person.death), age ? (age.approx ? `about age ${age.years}` : `aged ${age.years}`) : ""]
-        .filter(Boolean).join(" · "),
+      detail: [
+        formatEvent(person.death),
+        age ? (age.approx ? `about age ${age.years}` : `aged ${age.years}`) : "",
+        survivedBy.length ? `survived by ${survivedBy.join(" and ")}` : "",
+      ].filter(Boolean).join(" · "),
     });
   }
 
