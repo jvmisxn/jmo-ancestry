@@ -1161,7 +1161,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       rank: 3,
       record: true,
       label: cleanSourceLabel(rawLabel, repoName) || rawLabel,
-      detail: [inLifetime ? `around age ${year - birthYear}` : "", source.publication, repoName]
+      detail: [inLifetime ? `around age ${year - birthYear}` : "", source.publication, source.repository]
         .filter(Boolean).join(" · "),
       url: source.url || "",
     });
