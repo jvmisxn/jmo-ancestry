@@ -761,6 +761,8 @@ function renderDetails() {
         );
         if (otherParentId) parts.push(`with ${givenName(personById(otherParentId)?.name)}`);
       }
+      const childBirthYear = yearLabel(child?.birth?.date);
+      if (childBirthYear) parts.push(`b. ${childBirthYear}`);
       const placeMeta = personListMeta(child);
       if (placeMeta) parts.push(placeMeta);
       map.set(childId, parts.join(" · "));
@@ -799,12 +801,14 @@ function renderDetails() {
     for (const sibId of ids) {
       const sib = personById(sibId);
       const sibYear = numericYear(sib?.birth?.date);
+      const sibYearLabel = yearLabel(sib?.birth?.date);
       const placeMeta = personListMeta(sib);
       let orderLabel = "";
       if (personBirthYear !== null && sibYear !== null) {
         orderLabel = sibYear < personBirthYear ? "Older sibling" : sibYear > personBirthYear ? "Younger sibling" : "Same birth year";
       }
-      const note = [orderLabel, placeMeta].filter(Boolean).join(" · ");
+      const yearNote = sibYearLabel ? `b. ${sibYearLabel}` : "";
+      const note = [orderLabel, yearNote, placeMeta].filter(Boolean).join(" · ");
       if (note) map.set(sibId, note);
     }
     return map.size ? map : null;
