@@ -770,26 +770,24 @@ function renderDetails() {
     childNoteById = map;
   }
 
-  // For each spouse, count shared children (children who list both people as
-  // parents) and append that tally to the spouse's meta line. Lets a reader
-  // know at a glance which union produced which family, especially when the
-  // person had children by more than one partner.
+  // For each spouse, show their birth year and shared-children count so each
+  // union is distinguishable at a glance — especially when a person had
+  // multiple partners or two spouses have similar names.
   let spouseNoteById = null;
   if (relations.spouses.length) {
     spouseNoteById = new Map();
     for (const spouseId of relations.spouses) {
+      const spouse = personById(spouseId);
       const sharedCount = relations.children.filter((childId) => {
         const child = personById(childId);
         return (child?.parents || []).includes(spouseId);
       }).length;
-      if (sharedCount > 0) {
-        const spouse = personById(spouseId);
-        const baseMeta = personListMeta(spouse);
-        const childNote = `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together`;
-        spouseNoteById.set(spouseId, [baseMeta, childNote].filter(Boolean).join(" · "));
-      }
+      const spouseYearLabel = yearLabel(spouse?.birth?.date);
+      const yearNote = spouseYearLabel ? `b. ${spouseYearLabel}` : "";
+      const baseMeta = personListMeta(spouse);
+      const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
+      spouseNoteById.set(spouseId, [yearNote, baseMeta, childNote].filter(Boolean).join(" · "));
     }
-    if (!spouseNoteById.size) spouseNoteById = null;
   }
 
   // Label each sibling and half-sibling as "Older" or "Younger" relative to
