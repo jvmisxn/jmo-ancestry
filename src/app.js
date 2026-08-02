@@ -4694,11 +4694,26 @@ function formatEvent(event) {
 // Prose form for use in life story sentences: "February 6, 1923, in Kentucky, USA"
 // vs formatEvent's " · " separator. Prefixes the place with "in" so place-only
 // events read grammatically ("was born in Kentucky" rather than "was born Kentucky").
+// Trims the trailing country name when it's the United States — redundant in
+// narrative prose for an American ancestry tree, and the cleaned form reads more
+// naturally: "born in Allen County, Kentucky" instead of "born in Allen County,
+// Kentucky, USA".
 function formatEventProse(event) {
   if (!event) return "";
   const date = humanizeDate(event.date);
-  const place = event.place ? `in ${event.place}` : "";
+  const place = event.place ? `in ${trimUsaCountry(event.place)}` : "";
   return [date, place].filter(Boolean).join(", ");
+}
+
+// Strip the trailing ", USA" / ", United States" / ", United States of America"
+// from a place string used in narrative prose. Only used by formatEventProse;
+// the facts panel and timeline keep the original form for precision.
+function trimUsaCountry(place) {
+  return String(place)
+    .replace(/,\s*United States of America$/i, "")
+    .replace(/,\s*United States$/i, "")
+    .replace(/,\s*USA$/i, "")
+    .trim();
 }
 
 function formatMetaDate(value) {
