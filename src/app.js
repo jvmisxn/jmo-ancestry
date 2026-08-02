@@ -1288,6 +1288,24 @@ function renderTimeline(person) {
   els.detailTimeline.replaceChildren();
   if (!extras.length) return;
 
+  // Collapse multiple record entries for the same year into one. Multiple
+  // sources (e.g. two census URLs both dated 1950) produce redundant rows that
+  // clutter the timeline; the full source list is already in the Sources panel.
+  const yearRecordCounts = new Map();
+  for (const event of events) {
+    if (event.record) yearRecordCounts.set(event.year, (yearRecordCounts.get(event.year) || 0) + 1);
+  }
+  const seenRecordYears = new Set();
+  const displayEvents = events.map((event) => {
+    if (!event.record) return event;
+    if (seenRecordYears.has(event.year)) return null;
+    seenRecordYears.add(event.year);
+    const extra = (yearRecordCounts.get(event.year) || 1) - 1;
+    if (!extra) return event;
+    const extraNote = `+${extra} more record${extra === 1 ? "" : "s"}`;
+    return { ...event, detail: [event.detail, extraNote].filter(Boolean).join(" · ") };
+  }).filter(Boolean);
+
   const label = document.createElement("p");
   label.className = "notes-label";
   label.textContent = "Life timeline";
@@ -1295,7 +1313,7 @@ function renderTimeline(person) {
 
   const list = document.createElement("ol");
   list.className = "timeline-list";
-  for (const event of events) {
+  for (const event of displayEvents) {
     const item = document.createElement("li");
     const typeClass = event.record ? "record" : event.rank === 0 ? "birth" : event.rank === 2 ? "death" : event.marriage ? "marriage" : "relative";
     item.className = `timeline-item timeline-item--${typeClass}`;
