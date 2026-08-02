@@ -970,17 +970,18 @@ function lifeTimeline(person, index = relationshipIndex()) {
   const deathYear = numericYear(person.death?.date);
   if (birthYear !== null) {
     const bornParentIds = [...(index.get(person.id)?.parents || [])];
-    const parentAges = bornParentIds
+    const parentAgeEntries = bornParentIds
       .map((pid) => {
         const parent = personById(pid);
         const py = numericYear(parent?.birth?.date);
-        return py !== null && birthYear - py >= 12 && birthYear - py <= 80 ? birthYear - py : null;
+        if (py === null || birthYear - py < 12 || birthYear - py > 80) return null;
+        return { name: givenName(parent?.name), age: birthYear - py };
       })
-      .filter((age) => age !== null);
-    const parentAgeDetail = parentAges.length === 1
-      ? `parent aged ${parentAges[0]}`
-      : parentAges.length >= 2
-      ? `parents aged ${parentAges.join(" and ")}`
+      .filter(Boolean);
+    const parentAgeDetail = parentAgeEntries.length === 1
+      ? `${parentAgeEntries[0].name} aged ${parentAgeEntries[0].age}`
+      : parentAgeEntries.length >= 2
+      ? parentAgeEntries.map(({ name, age }) => `${name} aged ${age}`).join(" · ")
       : "";
     const seenSibs = new Set([person.id]);
     let olderSibCount = 0;
