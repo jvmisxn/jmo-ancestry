@@ -1834,6 +1834,7 @@ function sourceQuality(source) {
   if (/photo|image/.test(text)) return { key: "photo", label: "Photo", className: "source-quality-photo" };
   if (/find a grave|billiongraves|memorial|cemetery|grave/.test(text)) return { key: "memorial", label: "Memorial", className: "source-quality-memorial" };
   if (/index|kdla|sortedbyname|death file|birls/.test(text)) return { key: "index", label: "Index", className: "source-quality-index" };
+  if (/^(user-provided|research log)/.test(text)) return { key: "note", label: "Note", className: "source-quality-note" };
   if (/tree lead|compiled|family tree|familysearch public|wikitree|fgs project|lead only/.test(text)) {
     return { key: "lead", label: "Lead", className: "source-quality-lead" };
   }

@@ -495,6 +495,12 @@ h3 {
   color: #8c3126;
 }
 
+.source-badge.source-quality-note {
+  background: rgba(90, 74, 140, 0.1);
+  border-color: rgba(90, 74, 140, 0.24);
+  color: #5a4a8c;
+}
+
 .source-badge.source-quality-photo {
   background: rgba(67, 99, 124, 0.1);
   color: var(--muted-strong);
@@ -1481,6 +1487,10 @@ button.timeline-label:focus-visible {
 
 .source-item.source-quality-conflict {
   border-left-color: #b84f3e;
+}
+
+.source-item.source-quality-note {
+  border-left-color: #7b68b5;
 }
 
 .source-item span,
