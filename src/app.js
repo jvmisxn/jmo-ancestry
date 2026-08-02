@@ -241,6 +241,7 @@ async function init() {
     state.sourcesExpanded = !state.sourcesExpanded;
     els.sourcesPanel.hidden = !state.sourcesExpanded;
     els.toggleSources.setAttribute("aria-expanded", String(state.sourcesExpanded));
+    if (state.sourcesExpanded) els.sourcesPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   els.viewport.addEventListener("wheel", onZoom, { passive: false });
   enableDrag();
@@ -1514,6 +1515,7 @@ function evidencePill(sources, person) {
   const pill = metaPill(evidenceSummary(sources, person), hasConflict ? "status-attention" : hasLead ? "status-lead" : "status-verified", () => {
     state.sourcesExpanded = true;
     renderDetails();
+    els.sourcesPanel.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   pill.title = "Open source details";
   return pill;
