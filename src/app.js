@@ -4110,6 +4110,10 @@ function tagListFact(person) {
   return fragment;
 }
 
+// Groups with more than this many members show a "Show N more" toggle so the
+// relationships panel doesn't scroll past a wall of siblings or children.
+const RELATION_GROUP_PREVIEW = 5;
+
 function linkGroup(label, ids = [], noteById = null) {
   if (!ids.length) return [];
   const heading = document.createElement("h3");
@@ -4119,37 +4123,56 @@ function linkGroup(label, ids = [], noteById = null) {
   // someone other than the focus — mirrors the directory's kinship column so
   // navigating from a distant relative's profile doesn't require mental bookkeeping.
   const showKinship = root && state.selectedId !== state.rootId;
-  return [
-    heading,
-    ...ids.map((id) => {
-      const person = personById(id);
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "relation-item";
-      let kinshipNote = "";
-      if (showKinship) {
-        if (id === state.rootId) {
-          kinshipNote = "Tree focus";
-        } else {
-          const kinship = kinshipLabel(id, root.id);
-          if (kinship) kinshipNote = `${givenName(root.name)}'s ${kinship}`;
-        }
+
+  const items = ids.map((id) => {
+    const person = personById(id);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "relation-item";
+    let kinshipNote = "";
+    if (showKinship) {
+      if (id === state.rootId) {
+        kinshipNote = "Tree focus";
+      } else {
+        const kinship = kinshipLabel(id, root.id);
+        if (kinship) kinshipNote = `${givenName(root.name)}'s ${kinship}`;
       }
-      const placeNote = (noteById && noteById.get(id)) || personListMeta(person);
-      const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "Open profile";
-      button.innerHTML = `
-        <span class="relation-name">
-          <strong>${escapeHtml(person?.name || id)}</strong>
-          <small>${escapeHtml(formatYears(person || {}))}</small>
-        </span>
-        <small class="relation-meta">${escapeHtml(meta)}</small>
-      `;
-      button.addEventListener("click", () => {
-        selectPerson(id, false, true);
-      });
-      return button;
-    }),
-  ];
+    }
+    const placeNote = (noteById && noteById.get(id)) || personListMeta(person);
+    const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "Open profile";
+    button.innerHTML = `
+      <span class="relation-name">
+        <strong>${escapeHtml(person?.name || id)}</strong>
+        <small>${escapeHtml(formatYears(person || {}))}</small>
+      </span>
+      <small class="relation-meta">${escapeHtml(meta)}</small>
+    `;
+    button.addEventListener("click", () => {
+      selectPerson(id, false, true);
+    });
+    return button;
+  });
+
+  // Collapse oversized groups; no global state needed — the toggle is
+  // purely DOM-local and resets naturally when a new person is selected.
+  const overflowCount = ids.length - RELATION_GROUP_PREVIEW;
+  if (overflowCount > 1) {
+    const overflow = items.slice(RELATION_GROUP_PREVIEW);
+    overflow.forEach((el) => { el.hidden = true; });
+    let expanded = false;
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "relation-overflow-toggle";
+    toggle.textContent = `Show ${overflowCount} more…`;
+    toggle.addEventListener("click", () => {
+      expanded = !expanded;
+      overflow.forEach((el) => { el.hidden = !expanded; });
+      toggle.textContent = expanded ? "Show fewer" : `Show ${overflowCount} more…`;
+    });
+    return [heading, ...items, toggle];
+  }
+
+  return [heading, ...items];
 }
 
 function renderPersonRow(person, term = "") {
