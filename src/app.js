@@ -907,7 +907,19 @@ function lifeTimeline(person, index = relationshipIndex()) {
   const birthYear = numericYear(person.birth?.date);
   const deathYear = numericYear(person.death?.date);
   if (birthYear !== null) {
-    events.push({ year: birthYear, rank: 0, label: "Born", detail: formatEvent(person.birth) });
+    const parentAges = [...(index.get(person.id)?.parents || [])]
+      .map((pid) => {
+        const parent = personById(pid);
+        const py = numericYear(parent?.birth?.date);
+        return py !== null && birthYear - py >= 12 && birthYear - py <= 80 ? birthYear - py : null;
+      })
+      .filter((age) => age !== null);
+    const parentAgeDetail = parentAges.length === 1
+      ? `parent aged ${parentAges[0]}`
+      : parentAges.length >= 2
+      ? `parents aged ${parentAges.join(" and ")}`
+      : "";
+    events.push({ year: birthYear, rank: 0, label: "Born", detail: [formatEvent(person.birth), parentAgeDetail].filter(Boolean).join(" · ") });
   }
 
   const personSpouses = index.get(person.id)?.spouses || new Set();
