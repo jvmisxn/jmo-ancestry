@@ -1055,12 +1055,14 @@ function lifeTimeline(person, index = relationshipIndex()) {
     const year = sourceEventYear(source, birthYear, deathYear);
     if (year === null) continue;
     const inLifetime = birthYear !== null && year >= birthYear && (deathYear === null || year <= deathYear);
+    const repoName = source.repository || sourceRepositoryName(source.url);
+    const rawLabel = source.label || source.title || source.url;
     events.push({
       year,
       rank: 3,
       record: true,
-      label: source.label || source.title || source.url,
-      detail: [inLifetime ? `around age ${year - birthYear}` : "", source.publication, source.repository]
+      label: cleanSourceLabel(rawLabel, repoName) || rawLabel,
+      detail: [inLifetime ? `around age ${year - birthYear}` : "", source.publication, repoName]
         .filter(Boolean).join(" · "),
       url: source.url || "",
     });
