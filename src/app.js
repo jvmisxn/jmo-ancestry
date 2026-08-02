@@ -4609,10 +4609,10 @@ function currentAgeLabel(person) {
     const hadBirthday = now.getMonth() + 1 > birth.month
       || (now.getMonth() + 1 === birth.month && now.getDate() >= birth.day);
     const years = thisYear - birth.year - (hadBirthday ? 0 : 1);
-    return years >= 0 && years < 130 ? `Age ${years}` : null;
+    return years >= 0 && years < 115 ? `Age ${years}` : null;
   }
   const years = thisYear - birth.year;
-  return years >= 0 && years < 130 ? `Age ~${years}` : null;
+  return years >= 0 && years < 115 ? `Age ~${years}` : null;
 }
 
 function parseDateParts(value) {
