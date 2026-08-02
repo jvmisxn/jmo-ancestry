@@ -779,10 +779,32 @@ function renderDetails() {
     if (!spouseNoteById.size) spouseNoteById = null;
   }
 
+  // Label each sibling and half-sibling as "Older" or "Younger" relative to
+  // the current person so birth order is visible without opening each profile.
+  // Falls back to place meta when neither birth year is known.
+  const personBirthYear = numericYear(person.birth?.date);
+  function siblingNoteMap(ids) {
+    const map = new Map();
+    for (const sibId of ids) {
+      const sib = personById(sibId);
+      const sibYear = numericYear(sib?.birth?.date);
+      const placeMeta = personListMeta(sib);
+      let orderLabel = "";
+      if (personBirthYear !== null && sibYear !== null) {
+        orderLabel = sibYear < personBirthYear ? "Older sibling" : sibYear > personBirthYear ? "Younger sibling" : "Same birth year";
+      }
+      const note = [orderLabel, placeMeta].filter(Boolean).join(" · ");
+      if (note) map.set(sibId, note);
+    }
+    return map.size ? map : null;
+  }
+  const siblingNoteById = siblingNoteMap(relations.siblings);
+  const halfSiblingNoteById = siblingNoteMap(relations.halfSiblings);
+
   const relationItems = [
     ...linkGroup("Parents", relations.parents),
-    ...linkGroup("Siblings", relations.siblings),
-    ...linkGroup("Half-siblings", relations.halfSiblings),
+    ...linkGroup("Siblings", relations.siblings, siblingNoteById),
+    ...linkGroup("Half-siblings", relations.halfSiblings, halfSiblingNoteById),
     ...linkGroup("Spouses", relations.spouses, spouseNoteById),
     ...linkGroup("Children", relations.children, childNoteById),
   ];
