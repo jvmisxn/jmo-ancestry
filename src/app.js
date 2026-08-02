@@ -251,6 +251,26 @@ async function init() {
   enablePhotoLightbox();
   window.addEventListener("resize", fitTreeAfterLayout);
 
+  // Expand long research notes when printing so the full text appears in
+  // the PDF rather than the 480-char preview. Restore the previous state
+  // after the print dialog closes.
+  let printNotesWasExpanded = false;
+  window.addEventListener("beforeprint", () => {
+    printNotesWasExpanded = state.notesExpanded;
+    if (!state.notesExpanded) {
+      state.notesExpanded = true;
+      const person = personById(state.selectedId);
+      if (person) renderNotes(person);
+    }
+  });
+  window.addEventListener("afterprint", () => {
+    if (!printNotesWasExpanded) {
+      state.notesExpanded = false;
+      const person = personById(state.selectedId);
+      if (person) renderNotes(person);
+    }
+  });
+
   applyDefaultPanelState();
   syncPanelState();
   render();
