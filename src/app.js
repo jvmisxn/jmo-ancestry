@@ -1277,6 +1277,15 @@ function renderPhotoViewer(person, photos, activeIndex) {
     event.preventDefault();
     openPhotoLightbox(person, photos, activeIndex);
   });
+  image.addEventListener("error", () => {
+    els.detailPhoto.classList.add("profile-photo--no-photo");
+    const placeholder = document.createElement("div");
+    placeholder.className = "photo-placeholder";
+    placeholder.textContent = initialsForName(person.name);
+    const msg = document.createElement("p");
+    msg.textContent = "Photo could not be loaded.";
+    els.detailPhoto.replaceChildren(placeholder, msg);
+  });
   els.detailPhoto.append(image);
 
   const captionText = [photo.caption, photo.credit].filter(Boolean).join(" - ");
@@ -1300,6 +1309,7 @@ function renderPhotoViewer(person, photos, activeIndex) {
     small.src = thumb.url;
     small.alt = "";
     small.loading = "lazy";
+    small.addEventListener("error", () => pick.remove());
     pick.append(small);
     pick.addEventListener("click", () => {
       if (index !== activeIndex) renderPhotoViewer(person, photos, index);
