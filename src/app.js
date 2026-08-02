@@ -1627,6 +1627,40 @@ function extractCensusLocation(label) {
   return location.length >= 4 ? location : null;
 }
 
+// Resolves a marriage year for person+spouse using the same two-pass logic as
+// the timeline: (1) scan marriage-record sources on either person for a label
+// year, (2) fall back to the earliest shared child's birth year minus one.
+// Returns { year, estimated } or null when no year can be determined.
+function resolveMarriageYear(person, spouseId) {
+  const birthYear = numericYear(person.birth?.date);
+  const deathYear = numericYear(person.death?.date);
+  const spouse = personById(spouseId);
+  if (!spouse) return null;
+  const sources = [...profileSources(person), ...profileSources(spouse)];
+  for (const src of sources) {
+    const label = String(src.label || src.title || "").toLowerCase();
+    if (!/marriage|married|wedding/.test(label)) continue;
+    const yr = sourceEventYear(src, birthYear, deathYear);
+    if (yr === null) continue;
+    if (birthYear !== null && yr < birthYear) continue;
+    if (deathYear !== null && yr > deathYear) continue;
+    return { year: yr, estimated: false };
+  }
+  const index = relationshipIndex();
+  const sharedChildren = orderedChildren([person.id], index).filter((cid) =>
+    (personById(cid)?.parents || []).includes(spouseId),
+  );
+  for (const cid of sharedChildren) {
+    const childYear = numericYear(personById(cid)?.birth?.date);
+    if (childYear === null) continue;
+    const candidate = childYear - 1;
+    if (birthYear !== null && candidate < birthYear) continue;
+    if (deathYear !== null && candidate > deathYear) continue;
+    return { year: candidate, estimated: true };
+  }
+  return null;
+}
+
 // Returns an array of paragraph strings so renderLifeStory presents each
 // phase of the generated story as its own paragraph rather than one dense
 // block. Grouped as: origin (birth + parents), marriage, family life
@@ -1638,7 +1672,8 @@ function generatedLifeStory(person) {
   const death = formatEventProse(person.death);
   const age = ageAtDeath(person);
   const parents = namesForIds(index.get(person.id)?.parents);
-  const spouseNames = namesForIds(index.get(person.id)?.spouses);
+  const spouseIds = [...(index.get(person.id)?.spouses || [])];
+  const spouseNames = namesForIds(spouseIds);
   const childIds = orderedChildren([person.id], index);
   const given = givenName(person.name);
   const intro = `${person.name}${years ? ` (${years})` : ""}`;
@@ -1651,11 +1686,20 @@ function generatedLifeStory(person) {
   if (parents.length) originParts.push(`${given} was the child of ${formatNameList(parents)}.`);
   paragraphs.push(originParts.join(" "));
 
-  // Para 2: marriage(s)
-  if (spouseNames.length === 1) {
-    paragraphs.push(`${given} married ${spouseNames[0]}.`);
-  } else if (spouseNames.length > 1) {
-    paragraphs.push(`${given} was married to ${formatNameList(spouseNames)}.`);
+  // Para 2: marriage(s) — include resolved year when available so the story
+  // reads "married Jane in 1912" rather than a bare name.
+  if (spouseIds.length === 1) {
+    const m = resolveMarriageYear(person, spouseIds[0]);
+    const yearStr = m ? (m.estimated ? ` around ${m.year}` : ` in ${m.year}`) : "";
+    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}.`);
+  } else if (spouseIds.length > 1) {
+    const parts = spouseIds.map((sid) => {
+      const name = personById(sid)?.name;
+      if (!name) return null;
+      const m = resolveMarriageYear(person, sid);
+      return m ? `${name} (${m.estimated ? "~" : ""}${m.year})` : name;
+    }).filter(Boolean);
+    paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
   }
 
   // Para 3: children and census records — documentary evidence of family life
@@ -4767,4 +4811,6 @@ export const __test = {
   obituarySubjectIsPerson,
   zoomStep,
   zoomAt,
+  resolveMarriageYear,
+  generatedLifeStory,
 };
