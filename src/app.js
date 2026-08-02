@@ -902,14 +902,11 @@ function relationHop(fromId, toId, index) {
   const hop = document.createElement("span");
   hop.className = "path-hop";
   if (index.get(fromId)?.parents?.has(toId)) {
-    hop.textContent = "↑";
-    hop.title = "parent";
+    hop.textContent = "child of";
   } else if (index.get(toId)?.parents?.has(fromId)) {
-    hop.textContent = "↓";
-    hop.title = "child";
+    hop.textContent = "parent of";
   } else {
-    hop.textContent = "•";
-    hop.title = "spouse";
+    hop.textContent = "married";
   }
   return hop;
 }
