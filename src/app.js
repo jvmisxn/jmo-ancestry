@@ -755,8 +755,8 @@ function renderDetails() {
     fact("Known as", person.aliases?.join(", ")),
     tagListFact(person),
   );
-  renderEvidenceCoverage(person);
   renderTimeline(person);
+  renderEvidenceCoverage(person);
   renderNotes(person);
   els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
   els.centerPerson.disabled = person.id === root?.id;
