@@ -931,6 +931,29 @@ function lifeTimeline(person, index = relationshipIndex()) {
     });
   }
 
+  // Siblings born after this person and within their lifetime — shows when
+  // younger brothers/sisters arrived, giving birth-order context to childhood.
+  const personParentIds = [...(index.get(person.id)?.parents || [])];
+  if (personParentIds.length > 0) {
+    for (const siblingId of orderedChildren(personParentIds, index)) {
+      if (siblingId === person.id) continue;
+      const sibling = personById(siblingId);
+      const year = numericYear(sibling?.birth?.date);
+      if (year === null) continue;
+      if (birthYear !== null && year <= birthYear) continue;
+      if (deathYear !== null && year > deathYear) continue;
+      const age = birthYear !== null ? year - birthYear : null;
+      const half = isHalfSiblingPair(person.id, siblingId, index);
+      events.push({
+        year,
+        rank: 1,
+        personId: siblingId,
+        label: `${sibling.name} born`,
+        detail: [half ? "half-sibling" : "sibling", age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
+      });
+    }
+  }
+
   for (const { ids, role } of [
     { ids: index.get(person.id)?.parents, role: "parent" },
     { ids: index.get(person.id)?.spouses, role: "spouse" },
