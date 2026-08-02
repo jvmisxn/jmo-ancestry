@@ -801,8 +801,24 @@ function renderDetails() {
   const siblingNoteById = siblingNoteMap(relations.siblings);
   const halfSiblingNoteById = siblingNoteMap(relations.halfSiblings);
 
+  // For each parent, show how old they were when this person was born — gives
+  // generational context at a glance without opening the parent's profile.
+  let parentNoteById = null;
+  if (personBirthYear !== null && relations.parents.length) {
+    const map = new Map();
+    for (const parentId of relations.parents) {
+      const parent = personById(parentId);
+      const py = numericYear(parent?.birth?.date);
+      if (py !== null) {
+        const parentAge = personBirthYear - py;
+        if (parentAge >= 12 && parentAge <= 80) map.set(parentId, `Age ${parentAge} at your birth`);
+      }
+    }
+    if (map.size) parentNoteById = map;
+  }
+
   const relationItems = [
-    ...linkGroup("Parents", relations.parents),
+    ...linkGroup("Parents", relations.parents, parentNoteById),
     ...linkGroup("Siblings", relations.siblings, siblingNoteById),
     ...linkGroup("Half-siblings", relations.halfSiblings, halfSiblingNoteById),
     ...linkGroup("Spouses", relations.spouses, spouseNoteById),
