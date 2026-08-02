@@ -907,7 +907,8 @@ function lifeTimeline(person, index = relationshipIndex()) {
   const birthYear = numericYear(person.birth?.date);
   const deathYear = numericYear(person.death?.date);
   if (birthYear !== null) {
-    const parentAges = [...(index.get(person.id)?.parents || [])]
+    const bornParentIds = [...(index.get(person.id)?.parents || [])];
+    const parentAges = bornParentIds
       .map((pid) => {
         const parent = personById(pid);
         const py = numericYear(parent?.birth?.date);
@@ -919,7 +920,18 @@ function lifeTimeline(person, index = relationshipIndex()) {
       : parentAges.length >= 2
       ? `parents aged ${parentAges.join(" and ")}`
       : "";
-    events.push({ year: birthYear, rank: 0, label: "Born", detail: [formatEvent(person.birth), parentAgeDetail].filter(Boolean).join(" · ") });
+    const seenSibs = new Set([person.id]);
+    let olderSibCount = 0;
+    for (const ppId of bornParentIds) {
+      for (const sibId of (index.get(ppId)?.children || [])) {
+        if (seenSibs.has(sibId)) continue;
+        seenSibs.add(sibId);
+        const sibBirthYear = numericYear(personById(sibId)?.birth?.date);
+        if (sibBirthYear !== null && sibBirthYear < birthYear) olderSibCount++;
+      }
+    }
+    const olderSibDetail = olderSibCount === 1 ? "1 older sibling" : olderSibCount >= 2 ? `${olderSibCount} older siblings` : "";
+    events.push({ year: birthYear, rank: 0, label: "Born", detail: [formatEvent(person.birth), parentAgeDetail, olderSibDetail].filter(Boolean).join(" · ") });
   }
 
   const personSpouses = index.get(person.id)?.spouses || new Set();
