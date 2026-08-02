@@ -1611,6 +1611,28 @@ function generatedLifeStory(person) {
   } else if (childIds.length > 0) {
     parts.push(`Known children include ${formatNameList(namesForIds(childIds))}.`);
   }
+
+  // Add census context derived from attached sources — turns documentary
+  // evidence into a readable sentence without repeating place data already
+  // stated above. Uses the same year-extraction logic as the timeline so
+  // both "1940 U.S. census, Allen County..." and "Ancestry source: 1950
+  // United States Federal Census" labels resolve correctly.
+  const birthNum = numericYear(person.birth?.date);
+  const deathNum = numericYear(person.death?.date);
+  const censusYears = [...new Set(
+    profileSources(person)
+      .filter((src) => /census/i.test(src.label || src.title || ""))
+      .map((src) => sourceEventYear(src, birthNum, deathNum))
+      .filter((yr) => yr !== null),
+  )].sort((a, b) => a - b);
+  if (censusYears.length === 1) {
+    parts.push(`${given} appears in the ${censusYears[0]} U.S. census.`);
+  } else if (censusYears.length >= 2) {
+    const last = censusYears[censusYears.length - 1];
+    const rest = censusYears.slice(0, -1).join(", ");
+    parts.push(`${given} appears in U.S. census records from ${rest} and ${last}.`);
+  }
+
   if (death) {
     const ageStr = age ? (age.approx ? `, about age ${age.years}` : `, aged ${age.years}`) : "";
     parts.push(`${given} died ${death}${ageStr}.`);
