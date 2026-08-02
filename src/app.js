@@ -1466,17 +1466,30 @@ function generatedLifeStory(person) {
   const years = formatYears(person);
   const birth = formatEvent(person.birth);
   const death = formatEvent(person.death);
+  const age = ageAtDeath(person);
   const parents = namesForIds(index.get(person.id)?.parents);
-  const spouses = namesForIds(index.get(person.id)?.spouses);
-  const children = namesForIds(index.get(person.id)?.children);
-  const lead = `${person.name}${years ? ` (${years})` : ""} is part of the working JMO family tree.`;
-  const parts = [lead];
+  const spouseNames = namesForIds(index.get(person.id)?.spouses);
+  const childIds = orderedChildren([person.id], index);
+  const given = givenName(person.name);
+  const intro = `${person.name}${years ? ` (${years})` : ""}`;
+  const parts = [];
 
-  if (birth) parts.push(`${givenName(person.name)} was born ${birth}.`);
-  if (parents.length) parts.push(`${givenName(person.name)} was recorded as the child of ${formatNameList(parents)}.`);
-  if (spouses.length) parts.push(`${givenName(person.name)} was connected in the tree with ${formatNameList(spouses)}.`);
-  if (children.length) parts.push(`Known children in this research set include ${formatNameList(children)}.`);
-  if (death) parts.push(`${givenName(person.name)} died ${death}.`);
+  parts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
+  if (parents.length) parts.push(`${given} was the child of ${formatNameList(parents)}.`);
+  if (spouseNames.length === 1) {
+    parts.push(`${given} married ${spouseNames[0]}.`);
+  } else if (spouseNames.length > 1) {
+    parts.push(`${given} was married to ${formatNameList(spouseNames)}.`);
+  }
+  if (childIds.length > 3) {
+    parts.push(`${given} had ${childIds.length} children.`);
+  } else if (childIds.length > 0) {
+    parts.push(`Known children include ${formatNameList(namesForIds(childIds))}.`);
+  }
+  if (death) {
+    const ageStr = age ? (age.approx ? `, about age ${age.years}` : `, aged ${age.years}`) : "";
+    parts.push(`${given} died ${death}${ageStr}.`);
+  }
 
   return parts.join(" ");
 }
