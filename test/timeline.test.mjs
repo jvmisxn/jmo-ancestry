@@ -74,6 +74,7 @@ const events = app.lifeTimeline(root);
 check("event order (year + label)", events.map((e) => `${e.year} ${e.label}`), [
   "1880 Born",
   "1900 1900 United States Census",
+  "1904 Married Spouse Example",
   "1905 Ada Junior born",
   "1908 Ben Example born",
   "1912 Mother Example died",
@@ -83,6 +84,8 @@ check("event order (year + label)", events.map((e) => `${e.year} ${e.label}`), [
   "1950 Obituary",
   "1975 Find a Grave memorial",
 ]);
+check("marriage event links to spouse", events.find((e) => e.marriage)?.personId, "spouse");
+check("marriage event carries age and estimated flag", events.find((e) => e.marriage)?.detail, "around age 24 · year estimated");
 check("posthumous record carries no age", events.find((e) => e.label === "Find a Grave memorial")?.detail, "Find a Grave");
 check("undated child and undated source excluded", events.some((e) => /No Dates|portrait/.test(e.label)), false);
 check("parent death before person's birth excluded", events.some((e) => e.label === "Father Example died"), false);
