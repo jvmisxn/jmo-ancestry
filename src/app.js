@@ -109,6 +109,7 @@ const els = {
   detailPhoto: document.querySelector("#detail-photo"),
   detailStory: document.querySelector("#detail-story"),
   detailFacts: document.querySelector("#detail-facts"),
+  detailEvidence: document.querySelector("#detail-evidence"),
   detailTimeline: document.querySelector("#detail-timeline"),
   detailNotes: document.querySelector("#detail-notes"),
   detailRelations: document.querySelector("#detail-relations"),
@@ -754,6 +755,7 @@ function renderDetails() {
     fact("Known as", person.aliases?.join(", ")),
     tagListFact(person),
   );
+  renderEvidenceCoverage(person);
   renderTimeline(person);
   renderNotes(person);
   els.centerPerson.textContent = person.id === root?.id ? "Tree focus" : "Make tree focus";
@@ -1883,6 +1885,177 @@ function evidencePill(sources, person) {
   });
   pill.title = "Open source details";
   return pill;
+}
+
+function sourceText(source) {
+  return [
+    source.type,
+    source.confidence,
+    source.label,
+    source.title,
+    source.repository,
+    source.publication,
+    source.excerpt,
+    sourceRepositoryName(source.url),
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function sourceMatches(source, pattern) {
+  return pattern.test(sourceText(source));
+}
+
+function sourcedBy(sources, pattern) {
+  return sources.some((source) => sourceMatches(source, pattern));
+}
+
+function leadCount(sources) {
+  return sources.filter((source) => sourceQuality(source).key === "lead").length;
+}
+
+function coverageItem(key, label, status, detail) {
+  return { key, label, status, detail };
+}
+
+function factCoverage({ key, label, hasFact, hasSource, hasLead, missingDetail, leadDetail, sourcedDetail }) {
+  if (!hasFact) return coverageItem(key, label, "missing", missingDetail);
+  if (hasSource) return coverageItem(key, label, "sourced", sourcedDetail || "Direct source attached");
+  if (hasLead) return coverageItem(key, label, "lead", leadDetail || "Needs direct source");
+  return coverageItem(key, label, "lead", leadDetail || "Fact present; source not identified");
+}
+
+function evidenceCoverage(person, index = relationshipIndex()) {
+  const sources = profileSources(person);
+  const sourceLeadCount = leadCount(sources);
+  const hasAnyLead = sourceLeadCount > 0 || (person.tags || []).some((tag) => tagStatusTone(tag) === "status-lead");
+  const parents = [...(index.get(person.id)?.parents || [])];
+  const spouses = [...(index.get(person.id)?.spouses || [])];
+  const children = [...(index.get(person.id)?.children || [])];
+  const hasRecordSource = sources.some((source) => sourceQuality(source).key === "record");
+  const hasConflict = sources.some((source) => sourceQuality(source).key === "conflict")
+    || (person.tags || []).some((tag) => tagStatusTone(tag) === "status-attention");
+
+  const items = [
+    factCoverage({
+      key: "birth",
+      label: "Birth",
+      hasFact: Boolean(person.birth?.date || person.birth?.place),
+      hasSource: sourcedBy(sources, /\b(birth|born|baptism|baptized|christening|delayed birth|birth certificate)\b/),
+      hasLead: hasAnyLead,
+      missingDetail: "No birth date or place",
+      leadDetail: "Birth fact needs a direct source",
+      sourcedDetail: "Birth source found",
+    }),
+    factCoverage({
+      key: "death",
+      label: "Death",
+      hasFact: Boolean(person.death?.date || person.death?.place),
+      hasSource: sourcedBy(sources, /\b(death|died|obituary|memorial|grave|cemetery|burial|funeral)\b/),
+      hasLead: hasAnyLead,
+      missingDetail: currentAgeLabel(person) ? "Living or no death recorded" : "No death date or place",
+      leadDetail: "Death fact needs a direct source",
+      sourcedDetail: "Death source found",
+    }),
+    factCoverage({
+      key: "parents",
+      label: "Parents",
+      hasFact: parents.length > 0,
+      hasSource: sourcedBy(sources, /\b(parent|parents|father|mother|son of|daughter of|child of|census|obituary)\b/),
+      hasLead: hasAnyLead || hasRecordSource,
+      missingDetail: "No parents linked",
+      leadDetail: parents.length === 1 ? "One parent linked; needs support" : "Parents linked; evidence not explicit",
+      sourcedDetail: `${parents.length} parent${parents.length === 1 ? "" : "s"} linked with supporting source`,
+    }),
+    spouses.length
+      ? factCoverage({
+          key: "marriage",
+          label: "Marriage",
+          hasFact: true,
+          hasSource: sourcedBy(sources, /\b(marriage|married|wedding|license|spouse|husband|wife|divorce)\b/),
+          hasLead: hasAnyLead,
+          leadDetail: spouses.length === 1 ? "Spouse linked; marriage source missing" : `${spouses.length} spouses linked; sources missing`,
+          sourcedDetail: "Marriage or spouse source found",
+        })
+      : coverageItem("marriage", "Marriage", "not-applicable", "No spouse linked"),
+    children.length
+      ? factCoverage({
+          key: "children",
+          label: "Children",
+          hasFact: true,
+          hasSource: sourcedBy(sources, /\b(child|children|son|daughter|census|obituary|survived by)\b/),
+          hasLead: hasAnyLead || hasRecordSource,
+          leadDetail: `${children.length} child${children.length === 1 ? "" : "ren"} linked; evidence not explicit`,
+          sourcedDetail: `${children.length} child${children.length === 1 ? "" : "ren"} linked with supporting source`,
+        })
+      : coverageItem("children", "Children", "not-applicable", "No children linked"),
+    sourcedBy(sources, /\b(census|residence|resident|city directory|public records|address|lived|household)\b/)
+      ? coverageItem("residence", "Census / residence", "sourced", "Residence record found")
+      : coverageItem("residence", "Census / residence", hasAnyLead ? "lead" : "missing", hasAnyLead ? "No residence record identified" : "No census or residence source"),
+    sourcedBy(sources, /\b(obituary|memorial|find a grave|billiongraves|legacy|grave|cemetery)\b/)
+      ? coverageItem("obituary", "Obituary / memorial", "sourced", "Memorial or obituary source found")
+      : coverageItem("obituary", "Obituary / memorial", hasAnyLead ? "lead" : "missing", "No obituary or memorial source"),
+  ];
+
+  if (hasConflict) {
+    items.unshift(coverageItem("conflict", "Conflicts", "attention", "Review conflicting or duplicate evidence"));
+  }
+  return items;
+}
+
+function evidenceCoverageSummary(items) {
+  const counts = items.reduce((map, item) => {
+    map.set(item.status, (map.get(item.status) || 0) + 1);
+    return map;
+  }, new Map());
+  return {
+    sourced: counts.get("sourced") || 0,
+    lead: counts.get("lead") || 0,
+    missing: counts.get("missing") || 0,
+    attention: counts.get("attention") || 0,
+    notApplicable: counts.get("not-applicable") || 0,
+  };
+}
+
+function renderEvidenceCoverage(person) {
+  const items = evidenceCoverage(person);
+  const summary = evidenceCoverageSummary(items);
+  const reviewCount = summary.attention + summary.lead + summary.missing;
+  const label = document.createElement("p");
+  label.className = "notes-label";
+  label.textContent = "Evidence coverage";
+
+  const summaryLine = document.createElement("p");
+  summaryLine.className = "evidence-summary";
+  summaryLine.textContent = reviewCount
+    ? `${summary.sourced} covered · ${reviewCount} to review`
+    : `${summary.sourced} covered`;
+
+  const list = document.createElement("div");
+  list.className = "evidence-grid";
+  for (const item of items) {
+    const row = document.createElement("div");
+    row.className = `evidence-item evidence-${item.status}`;
+    const name = document.createElement("strong");
+    name.textContent = item.label;
+    const status = document.createElement("span");
+    status.className = "evidence-status";
+    status.textContent = evidenceStatusLabel(item.status);
+    const detail = document.createElement("small");
+    detail.textContent = item.detail;
+    row.append(name, status, detail);
+    list.append(row);
+  }
+
+  els.detailEvidence.replaceChildren(label, summaryLine, list);
+}
+
+function evidenceStatusLabel(status) {
+  return {
+    sourced: "Sourced",
+    lead: "Lead",
+    missing: "Missing",
+    attention: "Review",
+    "not-applicable": "N/A",
+  }[status] || status;
 }
 
 function cleanSourceLabel(label, repository) {
@@ -4575,6 +4748,9 @@ export const __test = {
   tagStatusTone,
   tagStatusRank,
   researchStatusPills,
+  evidenceCoverage,
+  evidenceCoverageSummary,
+  evidenceStatusLabel,
   metaPill,
   tagListFact,
   searchByTag,
