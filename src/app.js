@@ -1014,6 +1014,66 @@ function lifeTimeline(person, index = relationshipIndex()) {
   }
 
   const personSpouses = index.get(person.id)?.spouses || new Set();
+
+  // Marriage events: pull a year from a marriage source label when one is
+  // available, otherwise estimate from the first shared child's birth year.
+  // Only emit an event when a year can be resolved — undated unions already
+  // appear in the relationships panel so the timeline adds nothing without it.
+  const personSources = profileSources(person);
+  const marriedSpousesSeen = new Set();
+  for (const spouseId of personSpouses) {
+    const spouse = personById(spouseId);
+    if (!spouse) continue;
+
+    // Try to lift a year from a marriage-record source on either person.
+    const spouseSources = profileSources(spouse);
+    let marriageYear = null;
+    let estimated = false;
+    for (const source of [...personSources, ...spouseSources]) {
+      const label = String(source.label || source.title || "").toLowerCase();
+      if (!/marriage|married|wedding/.test(label)) continue;
+      const year = sourceEventYear(source, birthYear, deathYear);
+      if (year === null) continue;
+      if (birthYear !== null && year < birthYear) continue;
+      if (deathYear !== null && year > deathYear) continue;
+      marriageYear = year;
+      break;
+    }
+
+    // Fall back to one year before the earliest shared child's birth.
+    if (marriageYear === null) {
+      const sharedChildren = orderedChildren([person.id], index).filter((cid) => {
+        const child = personById(cid);
+        return (child?.parents || []).includes(spouseId);
+      });
+      for (const cid of sharedChildren) {
+        const childYear = numericYear(personById(cid)?.birth?.date);
+        if (childYear === null) continue;
+        const candidate = childYear - 1;
+        if (birthYear !== null && candidate < birthYear) continue;
+        if (deathYear !== null && candidate > deathYear) continue;
+        marriageYear = candidate;
+        estimated = true;
+        break;
+      }
+    }
+
+    if (marriageYear === null) continue;
+    marriedSpousesSeen.add(spouseId);
+    const age = birthYear !== null && marriageYear >= birthYear ? marriageYear - birthYear : null;
+    events.push({
+      year: marriageYear,
+      rank: 1,
+      marriage: true,
+      personId: spouseId,
+      label: `Married ${spouse.name}`,
+      detail: [
+        age !== null ? `around age ${age}` : "",
+        estimated ? "year estimated" : "",
+      ].filter(Boolean).join(" · "),
+    });
+  }
+
   for (const childId of orderedChildren([person.id], index)) {
     const child = personById(childId);
     const year = numericYear(child?.birth?.date);
@@ -1215,7 +1275,7 @@ function renderTimeline(person) {
   list.className = "timeline-list";
   for (const event of events) {
     const item = document.createElement("li");
-    const typeClass = event.record ? "record" : event.rank === 0 ? "birth" : event.rank === 2 ? "death" : "relative";
+    const typeClass = event.record ? "record" : event.rank === 0 ? "birth" : event.rank === 2 ? "death" : event.marriage ? "marriage" : "relative";
     item.className = `timeline-item timeline-item--${typeClass}`;
 
     const year = document.createElement("span");

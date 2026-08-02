@@ -1436,6 +1436,14 @@ button.timeline-label:focus-visible {
 
 /* Source records in the timeline get a subtly muted left rail and dimmer
    label so they read as documentary evidence rather than lived events. */
+.timeline-item--marriage .timeline-body {
+  border-left-color: var(--blue);
+}
+
+.timeline-item--marriage .timeline-year {
+  color: var(--blue);
+}
+
 .timeline-item--record .timeline-body {
   border-left-color: var(--accent);
   opacity: 0.8;
