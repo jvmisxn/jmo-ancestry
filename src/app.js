@@ -133,6 +133,7 @@ const els = {
   photoLightboxImage: document.querySelector("#photo-lightbox-image"),
   photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
   photoLightboxClose: document.querySelector("#photo-lightbox-close"),
+  detailsShell: document.querySelector(".details-shell"),
 };
 
 async function init() {
@@ -3038,6 +3039,7 @@ function selectPerson(id, reroot = true, openProfile = true) {
   syncHash(true);
   state.sourcesExpanded = false;
   state.notesExpanded = false;
+  els.detailsShell.scrollTop = 0;
   if (openProfile) {
     state.profileCollapsed = false;
     if (isCompactViewport()) state.peopleCollapsed = true;
