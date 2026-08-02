@@ -1765,10 +1765,32 @@ function generatedLifeStory(person) {
   }
   if (familyParts.length) paragraphs.push(familyParts.join(" "));
 
-  // Para 4: death
+  // Para 4: death — include who the person left behind so the story closes
+  // with the same family context the life timeline shows for the death event.
   if (death) {
     const ageStr = age ? (age.approx ? `, about age ${age.years}` : `, aged ${age.years}`) : "";
-    paragraphs.push(`${given} died ${death}${ageStr}.`);
+    const deathYear = numericYear(person.death?.date);
+    const survivingChildren = deathYear !== null
+      ? childIds.filter((cid) => {
+          const child = personById(cid);
+          const childDeath = numericYear(child?.death?.date);
+          return childDeath === null || childDeath > deathYear;
+        })
+      : [];
+    const survivingSpouses = deathYear !== null
+      ? spouseIds.filter((sid) => {
+          const spouse = personById(sid);
+          const spouseDeath = numericYear(spouse?.death?.date);
+          return spouseDeath === null || spouseDeath > deathYear;
+        })
+      : [];
+    const survivedBy = [];
+    if (survivingChildren.length === 1) survivedBy.push("one child");
+    else if (survivingChildren.length > 1) survivedBy.push(`${survivingChildren.length} children`);
+    if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
+    else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
+    const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
+    paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}.`);
   }
 
   return paragraphs;
