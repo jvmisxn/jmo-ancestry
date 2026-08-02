@@ -762,9 +762,15 @@ function renderDetails() {
         if (otherParentId) parts.push(`with ${givenName(personById(otherParentId)?.name)}`);
       }
       const childBirthYear = yearLabel(child?.birth?.date);
+      const childBirthNum = numericYear(child?.birth?.date);
       if (childBirthYear) parts.push(`b. ${childBirthYear}`);
       const childDeathYear = yearLabel(child?.death?.date);
-      if (childDeathYear) parts.push(`d. ${childDeathYear}`);
+      const childDeathNum = numericYear(child?.death?.date);
+      if (childDeathYear) {
+        const childAgeAtDeath = childBirthNum !== null && childDeathNum !== null ? childDeathNum - childBirthNum : null;
+        const ageTag = childAgeAtDeath === 0 ? " (infant)" : childAgeAtDeath !== null && childAgeAtDeath > 0 && childAgeAtDeath <= 110 ? ` (aged ${childAgeAtDeath})` : "";
+        parts.push(`d. ${childDeathYear}${ageTag}`);
+      }
       const placeMeta = personListMeta(child);
       if (placeMeta) parts.push(placeMeta);
       map.set(childId, parts.join(" · "));
@@ -785,9 +791,13 @@ function renderDetails() {
         return (child?.parents || []).includes(spouseId);
       }).length;
       const spouseYearLabel = yearLabel(spouse?.birth?.date);
+      const spouseBirthNum = numericYear(spouse?.birth?.date);
       const yearNote = spouseYearLabel ? `b. ${spouseYearLabel}` : "";
       const spouseDeathYearLabel = yearLabel(spouse?.death?.date);
-      const deathNote = spouseDeathYearLabel ? `d. ${spouseDeathYearLabel}` : "";
+      const spouseDeathNum = numericYear(spouse?.death?.date);
+      const spouseAgeAtDeath = spouseBirthNum !== null && spouseDeathNum !== null ? spouseDeathNum - spouseBirthNum : null;
+      const spouseAgeTag = spouseAgeAtDeath === 0 ? " (infant)" : spouseAgeAtDeath !== null && spouseAgeAtDeath > 0 && spouseAgeAtDeath <= 110 ? ` (aged ${spouseAgeAtDeath})` : "";
+      const deathNote = spouseDeathYearLabel ? `d. ${spouseDeathYearLabel}${spouseAgeTag}` : "";
       const baseMeta = personListMeta(spouse);
       const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
       spouseNoteById.set(spouseId, [yearNote, deathNote, baseMeta, childNote].filter(Boolean).join(" · "));
@@ -811,7 +821,10 @@ function renderDetails() {
       }
       const yearNote = sibYearLabel ? `b. ${sibYearLabel}` : "";
       const sibDeathYearLabel = yearLabel(sib?.death?.date);
-      const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}` : "";
+      const sibDeathNum = numericYear(sib?.death?.date);
+      const sibAgeAtDeath = sibYear !== null && sibDeathNum !== null ? sibDeathNum - sibYear : null;
+      const sibAgeTag = sibAgeAtDeath === 0 ? " (infant)" : sibAgeAtDeath !== null && sibAgeAtDeath > 0 && sibAgeAtDeath <= 110 ? ` (aged ${sibAgeAtDeath})` : "";
+      const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}${sibAgeTag}` : "";
       const note = [orderLabel, yearNote, deathNote, placeMeta].filter(Boolean).join(" · ");
       if (note) map.set(sibId, note);
     }
