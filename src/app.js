@@ -874,10 +874,12 @@ function renderNotes(person) {
     shown = `${notes.slice(0, cut > NOTES_PREVIEW_LIMIT / 2 ? cut : NOTES_PREVIEW_LIMIT).trimEnd()}…`;
   }
 
+  const nameIndex = storyNameIndex();
+  const closeIds = closeRelativeIds(person);
   for (const paragraphText of splitParagraphs(shown)) {
     const paragraph = document.createElement("p");
     paragraph.className = "notes-body";
-    paragraph.textContent = paragraphText;
+    appendStoryParagraph(paragraph, paragraphText, person.id, nameIndex, closeIds);
     els.detailNotes.append(paragraph);
   }
 
