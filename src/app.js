@@ -1698,10 +1698,26 @@ function generatedLifeStory(person) {
 
   const paragraphs = [];
 
-  // Para 1: origin — birth fact and parentage
+  // Para 1: origin — birth fact and parentage, with sibling count when others
+  // are linked through the same parents so the reader gets family-size context.
   const originParts = [];
   originParts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
-  if (parents.length) originParts.push(`${given} was the child of ${formatNameList(parents)}.`);
+  if (parents.length) {
+    const siblingIds = new Set();
+    for (const parentId of (index.get(person.id)?.parents || [])) {
+      for (const childId of (index.get(parentId)?.children || [])) {
+        if (childId !== person.id) siblingIds.add(childId);
+      }
+    }
+    const siblings = [...siblingIds];
+    const totalChildren = siblings.length + 1;
+    const siblingStr = siblings.length === 0
+      ? ""
+      : totalChildren <= 4
+        ? `, one of ${totalChildren} children alongside ${formatNameList(namesForIds(siblings))}`
+        : `, one of ${totalChildren} children`;
+    originParts.push(`${given} was the child of ${formatNameList(parents)}${siblingStr}.`);
+  }
   paragraphs.push(originParts.join(" "));
 
   // Para 2: marriage(s) — include resolved year when available so the story
