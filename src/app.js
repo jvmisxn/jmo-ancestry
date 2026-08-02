@@ -1069,6 +1069,7 @@ function renderProfilePhoto(person) {
   els.detailPhoto.hidden = false;
   if (!photos.length) {
     els.detailPhoto.replaceChildren();
+    els.detailPhoto.classList.add("profile-photo--no-photo");
     const placeholder = document.createElement("div");
     placeholder.className = "photo-placeholder";
     placeholder.textContent = initialsForName(person.name);
@@ -1079,6 +1080,7 @@ function renderProfilePhoto(person) {
     els.detailPhoto.append(caption);
     return;
   }
+  els.detailPhoto.classList.remove("profile-photo--no-photo");
   renderPhotoViewer(person, photos, 0);
 }
 

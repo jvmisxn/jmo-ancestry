@@ -1163,6 +1163,36 @@ dd,
   line-height: 1.45;
 }
 
+/* No-photo state: compact avatar row instead of a large empty placeholder,
+   so the life story gets space without hiding the initials affordance. */
+.profile-photo.profile-photo--no-photo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 13px;
+  background: rgba(233, 224, 210, 0.45);
+  border: 1px solid rgba(67, 99, 124, 0.15);
+  border-radius: var(--radius);
+}
+
+.profile-photo.profile-photo--no-photo .photo-placeholder {
+  flex: none;
+  width: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  border-radius: 50%;
+  font-size: 1rem;
+  border: none;
+  background: rgba(200, 188, 172, 0.72);
+}
+
+.profile-photo.profile-photo--no-photo p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .photo-thumbs {
   display: flex;
   flex-wrap: wrap;
@@ -1830,6 +1860,10 @@ button.timeline-label:focus-visible {
     max-height: 3.4in;
     object-fit: contain;
     background: #fff;
+  }
+
+  .profile-photo.profile-photo--no-photo {
+    display: none;
   }
 
   .workspace-section {
