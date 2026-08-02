@@ -1606,6 +1606,25 @@ function appendStoryParagraph(paragraph, text, selfId, nameIndex, closeIds) {
   if (cursor < text.length) paragraph.append(text.slice(cursor));
 }
 
+// Extract the county/state location from a census source label when present.
+// Handles formats like "1950 U.S. census, Allen County, Kentucky, ED 2-18..."
+// and "NARA 1950 census viewer, Allen County KY ED 2-18...". Returns null when
+// no parseable location follows the "census" keyword.
+function extractCensusLocation(label) {
+  if (!label) return null;
+  const lower = label.toLowerCase();
+  const censusIdx = lower.indexOf("census");
+  if (censusIdx === -1) return null;
+  const afterCensus = label.slice(censusIdx + 6);
+  const commaIdx = afterCensus.indexOf(",");
+  if (commaIdx === -1) return null;
+  let location = afterCensus.slice(commaIdx + 1).trim();
+  // Trim at record-detail keywords so "Allen County, Kentucky, ED 2-18, sheet 11" → "Allen County, Kentucky"
+  const stopMatch = /\b(?:ED|sheet|page|dwelling|household|serial|lines?)\s+\d/i.exec(location);
+  if (stopMatch) location = location.slice(0, stopMatch.index).trim().replace(/,\s*$/, "");
+  return location.length >= 4 ? location : null;
+}
+
 function generatedLifeStory(person) {
   const index = relationshipIndex();
   const years = formatYears(person);
@@ -1636,21 +1655,35 @@ function generatedLifeStory(person) {
   // evidence into a readable sentence without repeating place data already
   // stated above. Uses the same year-extraction logic as the timeline so
   // both "1940 U.S. census, Allen County..." and "Ancestry source: 1950
-  // United States Federal Census" labels resolve correctly.
+  // United States Federal Census" labels resolve correctly. When the source
+  // label includes a county/state, the sentence names the location so the
+  // story carries geographic context without the reader opening each source.
   const birthNum = numericYear(person.birth?.date);
   const deathNum = numericYear(person.death?.date);
-  const censusYears = [...new Set(
-    profileSources(person)
-      .filter((src) => /census/i.test(src.label || src.title || ""))
-      .map((src) => sourceEventYear(src, birthNum, deathNum))
-      .filter((yr) => yr !== null),
-  )].sort((a, b) => a - b);
+  const censusSrcs = profileSources(person)
+    .filter((src) => /census/i.test(src.label || src.title || ""));
+  const censusYearMap = new Map();
+  for (const src of censusSrcs) {
+    const yr = sourceEventYear(src, birthNum, deathNum);
+    if (yr === null) continue;
+    if (!censusYearMap.has(yr)) {
+      censusYearMap.set(yr, extractCensusLocation(src.label || src.title || ""));
+    }
+  }
+  const censusYears = [...censusYearMap.keys()].sort((a, b) => a - b);
   if (censusYears.length === 1) {
-    parts.push(`${given} appears in the ${censusYears[0]} U.S. census.`);
+    const loc = censusYearMap.get(censusYears[0]);
+    const locStr = loc ? ` in ${loc}` : "";
+    parts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}.`);
   } else if (censusYears.length >= 2) {
     const last = censusYears[censusYears.length - 1];
-    const rest = censusYears.slice(0, -1).join(", ");
-    parts.push(`${given} appears in U.S. census records from ${rest} and ${last}.`);
+    const rest = censusYears.slice(0, -1);
+    const locations = [...new Set(censusYears.map((y) => censusYearMap.get(y)).filter(Boolean))];
+    if (locations.length === 1) {
+      parts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last} in ${locations[0]}.`);
+    } else {
+      parts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
+    }
   }
 
   if (death) {
@@ -4517,6 +4550,7 @@ export const __test = {
   adoptData,
   preservedPlace,
   importedPeopleSummary,
+  extractCensusLocation,
   profileObituaries,
   obituarySubject,
   obituarySubjectIsPerson,
