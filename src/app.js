@@ -958,12 +958,14 @@ function lifeTimeline(person, index = relationshipIndex()) {
       if (deathYear !== null && year > deathYear) continue;
       const age = birthYear !== null ? year - birthYear : null;
       const half = isHalfSiblingPair(person.id, siblingId, index);
+      const baseLabel = half ? "half-sibling" : "sibling";
+      const siblingRole = birthYear !== null ? `younger ${baseLabel}` : baseLabel;
       events.push({
         year,
         rank: 1,
         personId: siblingId,
         label: `${sibling.name} born`,
-        detail: [half ? "half-sibling" : "sibling", age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
+        detail: [siblingRole, age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
       });
     }
 
@@ -980,13 +982,17 @@ function lifeTimeline(person, index = relationshipIndex()) {
       const half = isHalfSiblingPair(person.id, siblingId, index);
       const siblingBirthYear = numericYear(sibling?.birth?.date);
       const siblingAgeAtDeath = siblingBirthYear !== null ? year - siblingBirthYear : null;
+      const baseDeathLabel = half ? "half-sibling" : "sibling";
+      const siblingDeathRole = (birthYear !== null && siblingBirthYear !== null)
+        ? `${siblingBirthYear < birthYear ? "older" : "younger"} ${baseDeathLabel}`
+        : baseDeathLabel;
       events.push({
         year,
         rank: 1,
         personId: siblingId,
         label: `${sibling.name} died`,
         detail: [
-          half ? "half-sibling" : "sibling",
+          siblingDeathRole,
           siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
           age !== null ? `around age ${age}` : "",
         ].filter(Boolean).join(" · "),
