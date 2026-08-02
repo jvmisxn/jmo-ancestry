@@ -706,6 +706,7 @@ function renderDetails() {
 
   const kinship = root ? kinshipLabel(person.id, root.id) : "";
   const age = ageAtDeath(person);
+  const liveAge = currentAgeLabel(person);
   els.detailName.textContent = person.name;
   els.detailContext.textContent = person.id === root?.id
     ? "Selected person and current tree focus."
@@ -718,6 +719,7 @@ function renderDetails() {
       person.birth?.place ? placeSearchPill("Born", person.birth.place) : null,
       person.death?.place ? placeSearchPill("Died", person.death.place) : null,
       age ? metaPill(age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
+      liveAge ? metaPill(liveAge) : null,
       sources.length ? evidencePill(sources, person) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
       ...researchStatusPills(person),
@@ -4035,6 +4037,25 @@ function ageAtDeath(person) {
   return years >= 0 ? { years, approx: true } : null;
 }
 
+// Current age for people with no recorded death — shows "Age X" (exact) or
+// "Age ~X" (year-only birth) so living profiles carry the same at-a-glance
+// context as the "Died aged X" pill shown for deceased people.
+function currentAgeLabel(person) {
+  if (person.death?.date) return null;
+  const birth = parseDateParts(person.birth?.date);
+  if (!birth) return null;
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  if (birth.month && birth.day) {
+    const hadBirthday = now.getMonth() + 1 > birth.month
+      || (now.getMonth() + 1 === birth.month && now.getDate() >= birth.day);
+    const years = thisYear - birth.year - (hadBirthday ? 0 : 1);
+    return years >= 0 && years < 130 ? `Age ${years}` : null;
+  }
+  const years = thisYear - birth.year;
+  return years >= 0 && years < 130 ? `Age ~${years}` : null;
+}
+
 function parseDateParts(value) {
   const match = String(value || "").match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?/);
   if (!match) return null;
@@ -4233,6 +4254,7 @@ export const __test = {
   enablePhotoLightbox,
   lightbox,
   ageAtDeath,
+  currentAgeLabel,
   lifeTimeline,
   sourceEventYear,
   chronologicalSources,
