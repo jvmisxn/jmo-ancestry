@@ -1628,8 +1628,8 @@ function extractCensusLocation(label) {
 function generatedLifeStory(person) {
   const index = relationshipIndex();
   const years = formatYears(person);
-  const birth = formatEvent(person.birth);
-  const death = formatEvent(person.death);
+  const birth = formatEventProse(person.birth);
+  const death = formatEventProse(person.death);
   const age = ageAtDeath(person);
   const parents = namesForIds(index.get(person.id)?.parents);
   const spouseNames = namesForIds(index.get(person.id)?.spouses);
@@ -4379,6 +4379,16 @@ function formatEvent(event) {
   return [humanizeDate(event.date), event.place].filter(Boolean).join(" · ");
 }
 
+// Prose form for use in life story sentences: "February 6, 1923, in Kentucky, USA"
+// vs formatEvent's " · " separator. Prefixes the place with "in" so place-only
+// events read grammatically ("was born in Kentucky" rather than "was born Kentucky").
+function formatEventProse(event) {
+  if (!event) return "";
+  const date = humanizeDate(event.date);
+  const place = event.place ? `in ${event.place}` : "";
+  return [date, place].filter(Boolean).join(", ");
+}
+
 function formatMetaDate(value) {
   if (!value) return "";
   const parsed = new Date(value);
@@ -4523,6 +4533,7 @@ export const __test = {
   chronologicalSources,
   formatYears,
   formatEvent,
+  formatEventProse,
   surnameSortKey,
   surnameLabel,
   searchMatches,
