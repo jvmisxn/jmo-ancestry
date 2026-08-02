@@ -743,18 +743,29 @@ function renderDetails() {
   // child shares — mirrors the "with [spouse]" label already used in the
   // life timeline so the relationship list tells the same story.
   const spouseSet = new Set(relations.spouses);
+  // Label each child with birth order among this person's children. For parents
+  // with multiple spouses, also note which partner the child shares so each
+  // union's children are distinguishable without opening each profile.
   let childNoteById = null;
-  if (spouseSet.size > 1) {
-    childNoteById = new Map();
-    for (const childId of relations.children) {
+  if (relations.children.length) {
+    const map = new Map();
+    const total = relations.children.length;
+    for (let i = 0; i < total; i++) {
+      const childId = relations.children[i];
       const child = personById(childId);
-      const otherParentId = (child?.parents || []).find(
-        (pid) => pid !== person.id && spouseSet.has(pid),
-      );
-      if (otherParentId) {
-        childNoteById.set(childId, `with ${givenName(personById(otherParentId)?.name)}`);
+      const orderLabel = total === 1 ? "Only child" : `${ordinal(i + 1)} child`;
+      const parts = [orderLabel];
+      if (spouseSet.size > 1) {
+        const otherParentId = (child?.parents || []).find(
+          (pid) => pid !== person.id && spouseSet.has(pid),
+        );
+        if (otherParentId) parts.push(`with ${givenName(personById(otherParentId)?.name)}`);
       }
+      const placeMeta = personListMeta(child);
+      if (placeMeta) parts.push(placeMeta);
+      map.set(childId, parts.join(" · "));
     }
+    childNoteById = map;
   }
 
   // For each spouse, count shared children (children who list both people as
