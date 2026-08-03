@@ -1085,6 +1085,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
     if (marriageYear === null) continue;
     marriedSpousesSeen.add(spouseId);
     const age = birthYear !== null && marriageYear >= birthYear ? marriageYear - birthYear : null;
+    const marriagePlace = resolveMarriagePlace(person, spouseId);
     events.push({
       year: marriageYear,
       rank: 1,
@@ -1093,6 +1094,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       label: `Married ${spouse.name}`,
       detail: [
         age !== null ? `around age ${age}` : "",
+        marriagePlace ? `in ${marriagePlace}` : "",
         estimated ? "year estimated" : "",
       ].filter(Boolean).join(" · "),
     });
