@@ -1802,6 +1802,14 @@ function generatedLifeStory(person) {
     const locations = [...new Set(censusYears.map((y) => censusYearMap.get(y)).filter(Boolean))];
     if (locations.length === 1) {
       familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last} in ${locations[0]}.`);
+    } else if (censusYears.length === 2) {
+      // Two census years with different (or partially-missing) locations — name each pair so
+      // geographic movement is visible ("in Allen County, Kentucky" → "in Warren County, Kentucky").
+      const loc0 = censusYearMap.get(censusYears[0]);
+      const loc1 = censusYearMap.get(censusYears[1]);
+      const str0 = loc0 ? `the ${censusYears[0]} U.S. census in ${loc0}` : `the ${censusYears[0]} U.S. census`;
+      const str1 = loc1 ? `the ${censusYears[1]} census in ${loc1}` : `the ${censusYears[1]} census`;
+      familyParts.push(`${given} appears in ${str0} and ${str1}.`);
     } else {
       familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
     }
