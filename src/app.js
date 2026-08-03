@@ -2355,8 +2355,16 @@ const SOURCE_REPOSITORIES = [
   ["chroniclingamerica.loc.gov", "Chronicling America"],
   ["archive.org", "Internet Archive"],
   ["archives.gov", "National Archives"],
+  // NARA's 1940 census images are hosted on a dedicated S3 bucket; the
+  // endsWith(".archives.gov") rule does not reach amazonaws.com URLs.
+  ["nara-1940-census.s3.us-east-2.amazonaws.com", "National Archives"],
   ["legacy.com", "Legacy.com"],
   ["wikitree.com", "WikiTree"],
+  // Kentucky death-index CSV transcribed via SortedByName; quality already
+  // resolves to "Index" but the raw domain is unreadable as a badge.
+  ["sortedbyname.com", "SortedByName"],
+  // USGenWeb cemetery transcriptions (Prevatt, Crosby Lake, etc.).
+  ["usgenwebsites.org", "USGenWeb"],
 ];
 
 function sourceRepositoryName(url) {
