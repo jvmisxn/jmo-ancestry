@@ -1672,6 +1672,31 @@ function extractCensusLocation(label) {
   return location.length >= 4 ? location : null;
 }
 
+// Extract a burial place from Find a Grave source labels when person.burial.place
+// is absent. Handles three common label patterns:
+//   "burial Cemetery Name, Location"  — explicit "burial" keyword anywhere
+//   "buried Cemetery Name"            — "buried" keyword before cemetery name
+//   "(Cemetery Name, ...)"            — parenthesised cemetery name
+// Strips plot numbers ("plot N-0-1249") to keep the sentence readable.
+function extractFagCemetery(person) {
+  for (const src of profileSources(person)) {
+    const lbl = String(src.label || src.title || "");
+    if (!/find a grave/i.test(lbl)) continue;
+    let m = lbl.match(/\bburial\s+([^;)]+)/i);
+    if (m) return m[1].trim().replace(/,?\s*$/, "");
+    m = lbl.match(/\bburied\s+([A-Za-z''\- ]+(?:Cemetery|Memorial|Gardens|Park)[A-Za-z ,]*)/i);
+    if (m) return m[1].trim().replace(/,\s*$/, "");
+    m = lbl.match(/\(([A-Za-z''\- ]+Cemetery[^;)]*)/i);
+    if (m) {
+      return m[1].trim()
+        .replace(/,\s*plot\b.*$/, "")
+        .replace(/,\s*$/, "")
+        .trim();
+    }
+  }
+  return null;
+}
+
 // Resolves a marriage year for person+spouse using the same two-pass logic as
 // the timeline: (1) scan marriage-record sources on either person for a label
 // year, (2) fall back to the earliest shared child's birth year minus one.
@@ -2034,7 +2059,12 @@ function generatedLifeStory(person) {
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
-    const burialProse = person.burial?.place ? ` ${given} is buried ${formatEventProse(person.burial)}.` : "";
+    const fagCemetery = !person.burial?.place ? extractFagCemetery(person) : null;
+    const burialProse = person.burial?.place
+      ? ` ${given} is buried ${formatEventProse(person.burial)}.`
+      : fagCemetery
+        ? ` ${given} is buried in ${trimUsaCountry(fagCemetery)}.`
+        : "";
     paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}.${burialProse}`);
   } else if (person.burial?.place) {
     paragraphs.push(`${given} is buried ${formatEventProse(person.burial)}.`);
