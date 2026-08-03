@@ -31,7 +31,7 @@ globalThis.location = { hash: "" };
 globalThis.requestAnimationFrame = (fn) => fn;
 
 const { __test: app } = await import("../src/app.js");
-const { formatEventProse } = app;
+const { formatEventProse, trimPlaceAnnotations } = app;
 
 let failures = 0;
 function check(name, actual, expected) {
@@ -98,6 +98,33 @@ check(
   "month-year date and place",
   formatEventProse({ date: "1923-02", place: "Kentucky" }),
   "February 1923, in Kentucky",
+);
+
+// Research annotation stripping in prose place strings
+check(
+  "strips (lead) parenthetical from place",
+  trimPlaceAnnotations("Sumner County, Tennessee (lead) or Kentucky"),
+  "Sumner County, Tennessee",
+);
+check(
+  "strips parenthetical context note from place",
+  trimPlaceAnnotations("Warren County, Kentucky (resident of Allen County)"),
+  "Warren County, Kentucky",
+);
+check(
+  "strips parish parenthetical from place",
+  trimPlaceAnnotations("Dublin, Ireland (Brookshire, Lamborne)"),
+  "Dublin, Ireland",
+);
+check(
+  "plain place unchanged by annotation stripper",
+  trimPlaceAnnotations("Allen County, Kentucky, USA"),
+  "Allen County, Kentucky",
+);
+check(
+  "annotation stripping flows through formatEventProse",
+  formatEventProse({ date: "1892", place: "Sumner County, Tennessee (lead) or Kentucky" }),
+  "1892, in Sumner County, Tennessee",
 );
 
 if (failures) {

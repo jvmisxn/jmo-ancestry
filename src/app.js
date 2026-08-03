@@ -1867,7 +1867,7 @@ function generatedLifeStory(person) {
   const birthPlaceOnly = !birthYearOnly
     && /^\d{4}$/.test(person.birth?.date || "")
     && Boolean((person.birth?.place || "").trim());
-  const birthProse = birthPlaceOnly ? `in ${trimUsaCountry((person.birth?.place || "").trim())}` : birth;
+  const birthProse = birthPlaceOnly ? `in ${trimPlaceAnnotations((person.birth?.place || "").trim())}` : birth;
   originParts.push(birthProse && !birthYearOnly
     ? `${intro} was born ${birthProse}.`
     : `${intro} is recorded in the family tree.`);
@@ -2305,7 +2305,7 @@ function generatedLifeStory(person) {
     const deathIsYearOnly = /^\d{4}$/.test(person.death?.date || "");
     const deathHasPlace = !!(person.death?.place || "").trim();
     const deathProse = deathIsYearOnly && deathHasPlace
-      ? `in ${trimUsaCountry((person.death.place || "").trim())}`
+      ? `in ${trimPlaceAnnotations((person.death.place || "").trim())}`
       : deathIsYearOnly && !ageProse
       ? death
       : deathIsYearOnly
@@ -5252,7 +5252,7 @@ function formatEvent(event) {
 function formatEventProse(event) {
   if (!event) return "";
   const date = humanizeDate(event.date);
-  const place = event.place ? `in ${trimUsaCountry(event.place)}` : "";
+  const place = event.place ? `in ${trimPlaceAnnotations(event.place)}` : "";
   return [date, place].filter(Boolean).join(", ");
 }
 
@@ -5265,6 +5265,22 @@ function trimUsaCountry(place) {
     .replace(/,\s*United States$/i, "")
     .replace(/,\s*USA$/i, "")
     .trim();
+}
+
+// Strip researcher annotation patterns from a place string before narrative
+// use. Parentheticals like "(lead)", "(resident of Allen County)", and
+// "(Brookshire, Lamborne)" are working notes that read as gibberish in prose.
+// Trailing " or [alternative]" uncertainty markers are also omitted — the
+// narrative names the primary candidate only. The facts panel and timeline
+// keep the full, unmodified string for precision.
+function trimPlaceAnnotations(place) {
+  return trimUsaCountry(
+    String(place)
+      .replace(/\s*\([^)]*\)/g, "")   // strip researcher parentheticals
+      .replace(/\s+or\s+\S.*$/, "")   // strip trailing " or [alternative]"
+      .replace(/\s+/g, " ")
+      .trim(),
+  );
 }
 
 function formatMetaDate(value) {
@@ -5426,6 +5442,7 @@ export const __test = {
   formatYears,
   formatEvent,
   formatEventProse,
+  trimPlaceAnnotations,
   surnameSortKey,
   surnameLabel,
   searchMatches,
