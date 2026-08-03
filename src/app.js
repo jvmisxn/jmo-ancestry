@@ -1737,12 +1737,26 @@ function generatedLifeStory(person) {
   }
 
   // Para 3: children and census records — documentary evidence of family life
+  // When all listed children have known birth years that span a range, append
+  // "born between YEAR and YEAR" so the story conveys the pace of family growth.
+  // The span only appears when every loaded child has a date — partial data would
+  // misrepresent the full range.
   const familyParts = [];
-  if (childIds.length > 4) {
-    const firstNames = namesForIds(childIds.slice(0, 3));
-    familyParts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}.`);
-  } else if (childIds.length > 0) {
-    familyParts.push(`Known children include ${formatNameList(namesForIds(childIds))}.`);
+  if (childIds.length > 0) {
+    const childBirthYears = childIds
+      .map((cid) => numericYear(personById(cid)?.birth?.date))
+      .filter((y) => y !== null)
+      .sort((a, b) => a - b);
+    const allDated = childBirthYears.length === childIds.length;
+    const spanStr = allDated && childBirthYears.length >= 2 && childBirthYears[0] !== childBirthYears[childBirthYears.length - 1]
+      ? `, born between ${childBirthYears[0]} and ${childBirthYears[childBirthYears.length - 1]}`
+      : "";
+    if (childIds.length > 4) {
+      const firstNames = namesForIds(childIds.slice(0, 3));
+      familyParts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}${spanStr}.`);
+    } else {
+      familyParts.push(`Known children include ${formatNameList(namesForIds(childIds))}${spanStr}.`);
+    }
   }
 
   // Add census context derived from attached sources — turns documentary

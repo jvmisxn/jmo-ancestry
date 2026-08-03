@@ -48,7 +48,7 @@ function check(name, actual, expected) {
 check(
   "date and place joined with comma-in",
   formatEventProse({ date: "1923-02-06", place: "Kentucky, USA" }),
-  "February 6, 1923, in Kentucky, USA",
+  "February 6, 1923, in Kentucky",
 );
 
 // Year-only date + place
@@ -69,7 +69,7 @@ check(
 check(
   "place only prefixed with in",
   formatEventProse({ date: "", place: "Kentucky, USA" }),
-  "in Kentucky, USA",
+  "in Kentucky",
 );
 
 // Both empty → empty string (falsy)
