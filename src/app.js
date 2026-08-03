@@ -1793,18 +1793,35 @@ function generatedLifeStory(person) {
       : "";
     paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${ageStr}.`);
   } else if (spouseIds.length > 1) {
-    const parts = spouseIds.map((sid) => {
+    const spouseEntries = spouseIds.map((sid) => {
       const name = personById(sid)?.name;
       if (!name) return null;
       const m = resolveMarriageYear(person, sid);
-      if (!m) return name;
-      const marriageAge = birthNum !== null ? m.year - birthNum : null;
+      const marriageAge = m && birthNum !== null ? m.year - birthNum : null;
       const ageNote = marriageAge !== null && marriageAge >= 14 && marriageAge <= 80
         ? `, ${m.estimated ? "~" : ""}age ${marriageAge}`
         : "";
-      return `${name} (${m.estimated ? "~" : ""}${m.year}${ageNote})`;
+      return { sid, name, m, ageNote };
     }).filter(Boolean);
-    paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
+    // For exactly two spouses where both marriages have resolvable years and
+    // they are in chronological order, use "first married … later married …"
+    // so the reader sees these were sequential, not simultaneous, unions.
+    if (
+      spouseEntries.length === 2
+      && spouseEntries[0].m && spouseEntries[1].m
+      && spouseEntries[0].m.year <= spouseEntries[1].m.year
+    ) {
+      const [a, b] = spouseEntries;
+      const aYear = `${a.m.estimated ? "~" : ""}${a.m.year}${a.ageNote}`;
+      const bYear = `${b.m.estimated ? "~" : ""}${b.m.year}${b.ageNote}`;
+      paragraphs.push(`${given} first married ${a.name} (${aYear}), and later married ${b.name} (${bYear}).`);
+    } else {
+      const parts = spouseEntries.map(({ name, m, ageNote }) => {
+        if (!m) return name;
+        return `${name} (${m.estimated ? "~" : ""}${m.year}${ageNote})`;
+      });
+      paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
+    }
   }
 
   // Para 3: children and census records — documentary evidence of family life.
@@ -1918,7 +1935,10 @@ function generatedLifeStory(person) {
   // Para 4: death — include who the person left behind so the story closes
   // with the same family context the life timeline shows for the death event.
   if (death) {
-    const ageStr = age ? (age.approx ? `, about age ${age.years}` : `, aged ${age.years}`) : "";
+    const ageStr = !age ? ""
+      : age.years === 0 ? (age.approx ? ", likely in infancy" : ", in infancy")
+      : age.approx ? `, about age ${age.years}`
+      : `, aged ${age.years}`;
     const deathYear = numericYear(person.death?.date);
     const survivingChildren = deathYear !== null
       ? childIds.filter((cid) => {
