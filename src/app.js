@@ -1751,31 +1751,69 @@ function generatedLifeStory(person) {
     paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
   }
 
-  // Para 3: children and census records — documentary evidence of family life
-  // When all listed children have known birth years that span a range, append
-  // "born between YEAR and YEAR" so the story conveys the pace of family growth.
-  // The span only appears when every loaded child has a date — partial data would
-  // misrepresent the full range.
+  // Para 3: children and census records — documentary evidence of family life.
+  // For people with multiple spouses, children are grouped by co-parent when
+  // each child's parents array links back to one of the known spouses, so the
+  // reader can tell which children belong to which union without opening each
+  // profile. Falls back to the flat list when attribution is unavailable.
   const familyParts = [];
   if (childIds.length > 0) {
-    const childBirthYears = childIds
-      .map((cid) => numericYear(personById(cid)?.birth?.date))
-      .filter((y) => y !== null)
-      .sort((a, b) => a - b);
-    const allDated = childBirthYears.length === childIds.length;
-    const spanStr = allDated && childBirthYears.length >= 2 && childBirthYears[0] !== childBirthYears[childBirthYears.length - 1]
-      ? `, born between ${childBirthYears[0]} and ${childBirthYears[childBirthYears.length - 1]}`
-      : "";
-    if (childIds.length > 4) {
-      const firstNames = namesForIds(childIds.slice(0, 3));
-      familyParts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}${spanStr}.`);
-    } else {
-      const countWords = ["one", "two", "three", "four"];
-      const countWord = countWords[childIds.length - 1] || String(childIds.length);
-      const nameList = formatNameList(namesForIds(childIds));
-      familyParts.push(childIds.length === 1
-        ? `${given} had one recorded child, ${nameList}${spanStr}.`
-        : `${given} had ${countWord} recorded children: ${nameList}${spanStr}.`);
+    const numWord = (n) =>
+      (["one","two","three","four","five","six","seven","eight","nine","ten"][n - 1] || String(n));
+    let usedGrouped = false;
+    if (spouseIds.length > 1) {
+      const spouseSet = new Set(spouseIds);
+      const groupMap = new Map();
+      const unattr = [];
+      for (const cid of childIds) {
+        const child = personById(cid);
+        const coParent = (child?.parents || []).find((pid) => spouseSet.has(pid));
+        if (coParent) {
+          if (!groupMap.has(coParent)) groupMap.set(coParent, []);
+          groupMap.get(coParent).push(cid);
+        } else {
+          unattr.push(cid);
+        }
+      }
+      const groups = [...groupMap.entries()];
+      if (groups.length >= 2 || (groups.length === 1 && unattr.length > 0)) {
+        const totalStr = numWord(childIds.length);
+        const groupParts = groups.map(([sid, cids]) => {
+          const spouseName = personById(sid)?.name || sid;
+          const n = cids.length;
+          if (n > 4) {
+            const preview = formatNameList(namesForIds(cids.slice(0, 3)));
+            return `${numWord(n)} with ${spouseName}, including ${preview}`;
+          }
+          return `${numWord(n)} with ${spouseName} (${formatNameList(namesForIds(cids))})`;
+        });
+        if (unattr.length > 0) {
+          groupParts.push(`${numWord(unattr.length)} of uncertain parentage`);
+        }
+        // Use semicolons to separate groups so inner commas/ands don't bleed across.
+        familyParts.push(`${given} had ${totalStr} ${childIds.length === 1 ? "child" : "children"}: ${groupParts.join("; ")}.`);
+        usedGrouped = true;
+      }
+    }
+    if (!usedGrouped) {
+      const childBirthYears = childIds
+        .map((cid) => numericYear(personById(cid)?.birth?.date))
+        .filter((y) => y !== null)
+        .sort((a, b) => a - b);
+      const allDated = childBirthYears.length === childIds.length;
+      const spanStr = allDated && childBirthYears.length >= 2 && childBirthYears[0] !== childBirthYears[childBirthYears.length - 1]
+        ? `, born between ${childBirthYears[0]} and ${childBirthYears[childBirthYears.length - 1]}`
+        : "";
+      if (childIds.length > 4) {
+        const firstNames = namesForIds(childIds.slice(0, 3));
+        familyParts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}${spanStr}.`);
+      } else {
+        const countWord = numWord(childIds.length);
+        const nameList = formatNameList(namesForIds(childIds));
+        familyParts.push(childIds.length === 1
+          ? `${given} had one recorded child, ${nameList}${spanStr}.`
+          : `${given} had ${countWord} recorded children: ${nameList}${spanStr}.`);
+      }
     }
   }
 
