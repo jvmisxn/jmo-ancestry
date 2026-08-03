@@ -972,8 +972,24 @@ function renderNotes(person) {
   const needsClamp = notes.length > NOTES_PREVIEW_LIMIT && !state.notesExpanded;
   let shown = notes;
   if (needsClamp) {
-    const cut = notes.lastIndexOf(" ", NOTES_PREVIEW_LIMIT);
-    shown = `${notes.slice(0, cut > NOTES_PREVIEW_LIMIT / 2 ? cut : NOTES_PREVIEW_LIMIT).trimEnd()}…`;
+    // Prefer cutting at a sentence boundary so the preview reads as a complete
+    // thought rather than a mid-sentence fragment. Scan backward from the limit
+    // for period/!/? followed by whitespace (guards against mid-word abbreviation
+    // dots). Fall back to last word boundary when no sentence end is found.
+    let sentenceEnd = -1;
+    for (let i = Math.min(notes.length - 1, NOTES_PREVIEW_LIMIT); i >= NOTES_PREVIEW_LIMIT / 2; i--) {
+      const ch = notes[i];
+      if ((ch === "." || ch === "!" || ch === "?") && (i + 1 >= notes.length || /\s/.test(notes[i + 1]))) {
+        sentenceEnd = i + 1;
+        break;
+      }
+    }
+    if (sentenceEnd > 0) {
+      shown = notes.slice(0, sentenceEnd).trimEnd();
+    } else {
+      const cut = notes.lastIndexOf(" ", NOTES_PREVIEW_LIMIT);
+      shown = `${notes.slice(0, cut > NOTES_PREVIEW_LIMIT / 2 ? cut : NOTES_PREVIEW_LIMIT).trimEnd()}…`;
+    }
   }
 
   const nameIndex = storyNameIndex();
