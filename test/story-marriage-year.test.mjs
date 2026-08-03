@@ -63,7 +63,7 @@ check(
       { id: "kid1", name: "Sam Smith", birth: { date: "1906" }, parents: ["john", "jane"], children: [] },
     ],
   })[1],
-  "John married Jane Doe in 1905.",
+  "John married Jane Doe in 1905, at age 25.",
 );
 
 // 2. Single spouse, no source, child born 1907 → estimated "around 1906"
@@ -83,7 +83,7 @@ check(
       { id: "kid1", name: "Sam Smith", birth: { date: "1907" }, parents: ["john", "jane"], children: [] },
     ],
   })[1],
-  "John married Jane Doe around 1906.",
+  "John married Jane Doe around 1906, at about age 26.",
 );
 
 // 3. Single spouse, no source, no children → bare "married X"
@@ -131,7 +131,7 @@ check(
       { id: "kid2", name: "Tom Smith", birth: { date: "1920" }, parents: ["john", "mary"], children: [] },
     ],
   })[1],
-  "John was married to Jane Doe (1905) and Mary Brown (~1919).",
+  "John first married Jane Doe (1905, age 25), and later married Mary Brown (~1919, ~age 39).",
 );
 
 if (failures === 0) {

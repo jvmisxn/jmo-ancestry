@@ -56,7 +56,7 @@ check(
       { ...mom, children: ["alice"] },
     ],
   }),
-  "Alice Adams (b. 1900) was born 1900. Alice was the child of John Adams and Mary Adams.",
+  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams.",
 );
 
 // 2. One sibling (2 total) — "alongside <name>"
@@ -70,7 +70,7 @@ check(
       { ...mom, children: ["alice", "bob"] },
     ],
   }),
-  "Alice Adams (b. 1900) was born 1900. Alice was the child of John Adams and Mary Adams, one of 2 children alongside Bob Adams.",
+  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams, one of 2 children alongside Bob Adams.",
 );
 
 // 3. Three total children — lists all siblings
@@ -85,7 +85,7 @@ check(
       { ...mom, children: ["alice", "bob", "carol"] },
     ],
   }),
-  "Alice Adams (b. 1900) was born 1900. Alice was the child of John Adams and Mary Adams, one of 3 children alongside Bob Adams and Carol Adams.",
+  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams, one of 3 children alongside Bob Adams and Carol Adams.",
 );
 
 // 4. Four total children — still lists siblings (max for inline list)
@@ -101,7 +101,7 @@ check(
       { ...mom, children: ["alice", "bob", "carol", "dan"] },
     ],
   }),
-  "Alice Adams (b. 1900) was born 1900. Alice was the child of John Adams and Mary Adams, one of 4 children alongside Bob Adams, Carol Adams, and Dan Adams.",
+  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams, one of 4 children alongside Bob Adams, Carol Adams, and Dan Adams.",
 );
 
 // 5. Five total — count only, no name list
@@ -118,7 +118,7 @@ check(
       { ...mom, children: ["alice", "bob", "carol", "dan", "eve"] },
     ],
   }),
-  "Alice Adams (b. 1900) was born 1900. Alice was the child of John Adams and Mary Adams, one of 5 children.",
+  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams, one of 5 children alongside Bob and Carol and 2 others.",
 );
 
 if (failures === 0) {
