@@ -1857,6 +1857,9 @@ function generatedLifeStory(person) {
     // For exactly two spouses where both marriages have resolvable years and
     // they are in chronological order, use "first married … later married …"
     // so the reader sees these were sequential, not simultaneous, unions.
+    // When the first spouse's death year falls between the two marriages,
+    // add "widowed in YYYY" so the reader understands the union ended by death
+    // rather than divorce, without having to open the first spouse's profile.
     if (
       spouseEntries.length === 2
       && spouseEntries[0].m && spouseEntries[1].m
@@ -1865,13 +1868,40 @@ function generatedLifeStory(person) {
       const [a, b] = spouseEntries;
       const aYear = `${a.m.estimated ? "~" : ""}${a.m.year}${a.ageNote}`;
       const bYear = `${b.m.estimated ? "~" : ""}${b.m.year}${b.ageNote}`;
-      paragraphs.push(`${given} first married ${a.name} (${aYear}), and later married ${b.name} (${bYear}).`);
+      const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
+      const isWidowed = firstSpouseDeath !== null
+        && firstSpouseDeath >= a.m.year
+        && firstSpouseDeath <= b.m.year;
+      paragraphs.push(
+        isWidowed
+          ? `${given} first married ${a.name} (${aYear}) and, widowed in ${firstSpouseDeath}, later married ${b.name} (${bYear}).`
+          : `${given} first married ${a.name} (${aYear}), and later married ${b.name} (${bYear}).`,
+      );
     } else {
-      const parts = spouseEntries.map(({ name, m, ageNote }) => {
-        if (!m) return name;
-        return `${name} (${m.estimated ? "~" : ""}${m.year}${ageNote})`;
-      });
-      paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
+      // When exactly two spouses appear but both marriage years aren't available
+      // in the right order, check if the first entry has a year and the first
+      // spouse is deceased — that still warrants a "widowed in YYYY" note so the
+      // reader understands the reason for remarriage without opening the profile.
+      if (
+        spouseEntries.length === 2
+        && spouseEntries[0].m && !spouseEntries[1].m
+      ) {
+        const [a, b] = spouseEntries;
+        const aYear = `${a.m.estimated ? "~" : ""}${a.m.year}${a.ageNote}`;
+        const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
+        const isWidowed = firstSpouseDeath !== null && firstSpouseDeath >= a.m.year;
+        paragraphs.push(
+          isWidowed
+            ? `${given} married ${a.name} (${aYear}) and, widowed in ${firstSpouseDeath}, later married ${b.name}.`
+            : `${given} was married to ${a.name} (${aYear}) and ${b.name}.`,
+        );
+      } else {
+        const parts = spouseEntries.map(({ name, m, ageNote }) => {
+          if (!m) return name;
+          return `${name} (${m.estimated ? "~" : ""}${m.year}${ageNote})`;
+        });
+        paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
+      }
     }
   }
 
