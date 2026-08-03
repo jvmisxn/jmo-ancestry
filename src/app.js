@@ -1485,7 +1485,14 @@ function enablePhotoLightbox() {
 
 function renderLifeStory(person) {
   const obituaries = profileObituaries(person);
-  const story = person.profile?.article || person.lifeStory || person.profile?.summary || generatedLifeStory(person);
+  // Summaries that are auto-generated placeholder text ("appears in the JMO Ancestry
+  // working tree") read worse than the derived story — skip them so the generated
+  // prose shows instead. Hand-crafted summaries don't contain this phrase.
+  const rawSummary = person.profile?.summary;
+  const summary = typeof rawSummary === "string" && rawSummary.includes("appears in the JMO Ancestry working tree")
+    ? null
+    : rawSummary;
+  const story = person.profile?.article || person.lifeStory || summary || generatedLifeStory(person);
   const paragraphs = Array.isArray(story) ? story : splitParagraphs(story);
 
   els.detailStory.replaceChildren();

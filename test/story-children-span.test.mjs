@@ -43,8 +43,8 @@ const check = (label, actual, expected) => {
 function childrenParaFor(data) {
   app.state.data = data;
   const paras = app.generatedLifeStory(data.people[0]);
-  // Family para is first paragraph that mentions "children" or "Known children"
-  return paras.find((p) => /children/i.test(p)) || null;
+  // Family para contains "[name] had ... child[ren]"; origin para says "child of"
+  return paras.find((p) => /\bhad\b.*\bchild/i.test(p)) || null;
 }
 
 const parent = {
@@ -64,7 +64,7 @@ check(
       { id: "c1", name: "Bob Smith", parents: ["alice"], children: [], spouses: [] },
     ],
   }),
-  "Known children include Bob Smith.",
+  "Alice had one recorded child, Bob Smith.",
 );
 
 // 2. Two children, both dated, different years — span shown
@@ -77,7 +77,7 @@ check(
       { id: "c2", name: "Carol Smith", birth: { date: "1925" }, parents: ["alice"], children: [], spouses: [] },
     ],
   }),
-  "Known children include Bob Smith and Carol Smith, born between 1922 and 1925.",
+  "Alice had two recorded children: Bob Smith and Carol Smith, born between 1922 and 1925.",
 );
 
 // 3. Two children — one undated — no span (partial data)
@@ -90,7 +90,7 @@ check(
       { id: "c2", name: "Carol Smith", parents: ["alice"], children: [], spouses: [] },
     ],
   }),
-  "Known children include Bob Smith and Carol Smith.",
+  "Alice had two recorded children: Bob Smith and Carol Smith.",
 );
 
 // 4. Two children born same year — no span (range is zero)
@@ -103,7 +103,7 @@ check(
       { id: "c2", name: "Carol Smith", birth: { date: "1922" }, parents: ["alice"], children: [], spouses: [] },
     ],
   }),
-  "Known children include Bob Smith and Carol Smith.",
+  "Alice had two recorded children: Bob Smith and Carol Smith.",
 );
 
 // 5. Five children all dated — large family with span
