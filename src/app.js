@@ -2192,6 +2192,17 @@ function generatedLifeStory(person) {
           return spouseDeath !== null && spouseDeath < deathYear;
         })
       : [];
+    // Children who died strictly before this person — losing a child before
+    // one's own death is genealogically significant; surface it the same way
+    // as predeceased spouses. Capped at 3 by name; larger counts use a count
+    // phrase to avoid overwhelming the death sentence.
+    const predeceasedChildren = deathYear !== null
+      ? childIds.filter((cid) => {
+          const child = personById(cid);
+          const childDeath = numericYear(child?.death?.date);
+          return childDeath !== null && childDeath < deathYear;
+        })
+      : [];
     const survivedBy = [];
     if (survivingChildren.length === 1) {
       survivedBy.push(`child ${givenName(personById(survivingChildren[0])?.name)}`);
@@ -2210,9 +2221,20 @@ function generatedLifeStory(person) {
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
-    const predeceasedNames = predeceasedSpouses.map((sid) => givenName(personById(sid)?.name)).filter(Boolean);
-    const predeceasedStr = predeceasedNames.length
-      ? `, predeceased by ${formatNameList(predeceasedNames)}`
+    const predeceasedParts = [];
+    const predeceasedSpouseNames = predeceasedSpouses.map((sid) => givenName(personById(sid)?.name)).filter(Boolean);
+    if (predeceasedSpouseNames.length) predeceasedParts.push(formatNameList(predeceasedSpouseNames));
+    if (predeceasedChildren.length >= 1 && predeceasedChildren.length <= 3) {
+      const childGivens = predeceasedChildren.map((cid) => givenName(personById(cid)?.name)).filter(Boolean);
+      if (childGivens.length) {
+        const childLabel = predeceasedChildren.length === 1 ? `child ${childGivens[0]}` : `children ${formatNameList(childGivens)}`;
+        predeceasedParts.push(childLabel);
+      }
+    } else if (predeceasedChildren.length > 3) {
+      predeceasedParts.push(`${predeceasedChildren.length} children`);
+    }
+    const predeceasedStr = predeceasedParts.length
+      ? `, predeceased by ${predeceasedParts.join(" and ")}`
       : "";
     const cemetery = !person.burial?.place ? extractCemeteryName(person) : null;
     const burialProse = person.burial?.place
