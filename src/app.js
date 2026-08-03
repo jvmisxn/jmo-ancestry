@@ -1958,6 +1958,22 @@ function generatedLifeStory(person) {
       }
     }
   }
+
+  // Draft registration: WWII (1940-1947) and WWI (1917-1918) draft cards are
+  // common sources for male ancestors born roughly 1877-1924. When one is
+  // attached, add a brief factual sentence so the historical event appears in
+  // the narrative, not only in the sources panel. The source label range
+  // (e.g. "1940-1947") blocks year extraction, so no year is claimed.
+  const draftWars = new Set();
+  for (const src of profileSources(person)) {
+    const lbl = String(src.label || src.title || "");
+    if (/world war ii|ww2\b|wwii\b/i.test(lbl) && /draft/i.test(lbl)) draftWars.add("II");
+    else if (/world war i(?!i)|ww1\b|wwi(?!i)/i.test(lbl) && /draft/i.test(lbl)) draftWars.add("I");
+  }
+  for (const war of ["I", "II"]) {
+    if (draftWars.has(war)) familyParts.push(`${given} registered for the World War ${war} draft.`);
+  }
+
   if (familyParts.length) paragraphs.push(familyParts.join(" "));
 
   // Para 4: death — include who the person left behind so the story closes
