@@ -2620,7 +2620,12 @@ function cleanSourceLabel(label, repository) {
     new RegExp(`^${pattern}\\s*(source|record|entry)?\\s*[:\\-–]\\s*`, "i"),
     "",
   ).trim();
-  return stripped || label;
+  if (stripped && stripped !== label) return stripped;
+  // When the label starts with the repository name as a plain prefix (no delimiter),
+  // strip it so the badge doesn't repeat in the title — e.g. "Find a Grave memorial
+  // 65081823 (Rufus R. Graves, 1879–1950)" → "memorial 65081823 (Rufus R. Graves, 1879–1950)".
+  const plainStripped = label.replace(new RegExp(`^${pattern}\\s+`, "i"), "").trim();
+  return (plainStripped && plainStripped !== label) ? plainStripped : label;
 }
 
 function renderSourceItem(source, eventYear = null, birthYear = null) {
