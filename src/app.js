@@ -1724,6 +1724,8 @@ function generatedLifeStory(person) {
   const intro = `${person.name}${years ? ` (${years})` : ""}`;
   const nicknameMatch = String(person.name || "").match(/"([^"]+)"/);
   const nickname = nicknameMatch && nicknameMatch[1] !== given ? nicknameMatch[1] : null;
+  const birthNum = numericYear(person.birth?.date);
+  const deathNum = numericYear(person.death?.date);
 
   const paragraphs = [];
 
@@ -1753,18 +1755,29 @@ function generatedLifeStory(person) {
   }
   paragraphs.push(originParts.join(" "));
 
-  // Para 2: marriage(s) — include resolved year when available so the story
-  // reads "married Jane in 1912" rather than a bare name.
+  // Para 2: marriage(s) — include resolved year and approximate age when
+  // available so the reader gets "married Jane in 1912, at age 23" rather
+  // than a bare name or year-only sentence. Mirrors how age-at-death already
+  // adds context to the death paragraph.
   if (spouseIds.length === 1) {
     const m = resolveMarriageYear(person, spouseIds[0]);
     const yearStr = m ? (m.estimated ? ` around ${m.year}` : ` in ${m.year}`) : "";
-    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}.`);
+    const marriageAge = m && birthNum !== null ? m.year - birthNum : null;
+    const ageStr = marriageAge !== null && marriageAge >= 14 && marriageAge <= 80
+      ? `, at ${m.estimated ? "about " : ""}age ${marriageAge}`
+      : "";
+    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${ageStr}.`);
   } else if (spouseIds.length > 1) {
     const parts = spouseIds.map((sid) => {
       const name = personById(sid)?.name;
       if (!name) return null;
       const m = resolveMarriageYear(person, sid);
-      return m ? `${name} (${m.estimated ? "~" : ""}${m.year})` : name;
+      if (!m) return name;
+      const marriageAge = birthNum !== null ? m.year - birthNum : null;
+      const ageNote = marriageAge !== null && marriageAge >= 14 && marriageAge <= 80
+        ? `, ${m.estimated ? "~" : ""}age ${marriageAge}`
+        : "";
+      return `${name} (${m.estimated ? "~" : ""}${m.year}${ageNote})`;
     }).filter(Boolean);
     paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
   }
@@ -1842,8 +1855,6 @@ function generatedLifeStory(person) {
   // United States Federal Census" labels resolve correctly. When the source
   // label includes a county/state, the sentence names the location so the
   // story carries geographic context without the reader opening each source.
-  const birthNum = numericYear(person.birth?.date);
-  const deathNum = numericYear(person.death?.date);
   const censusSrcs = profileSources(person)
     .filter((src) => /census/i.test(src.label || src.title || ""));
   const censusYearMap = new Map();
