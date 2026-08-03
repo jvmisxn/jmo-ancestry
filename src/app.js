@@ -1746,11 +1746,22 @@ function generatedLifeStory(person) {
     }
     const siblings = [...siblingIds];
     const totalChildren = siblings.length + 1;
-    const siblingStr = siblings.length === 0
-      ? ""
-      : totalChildren <= 4
-        ? `, one of ${totalChildren} children alongside ${formatNameList(namesForIds(siblings))}`
+    let siblingStr;
+    if (siblings.length === 0) {
+      siblingStr = "";
+    } else if (totalChildren <= 4) {
+      siblingStr = `, one of ${totalChildren} children alongside ${formatNameList(namesForIds(siblings))}`;
+    } else {
+      // For large families (5+ children), name the first two siblings in birth
+      // order so the reader gets a human anchor without a long roll call —
+      // mirrors the "including Sarah and John" pattern used in the death paragraph.
+      const orderedSibs = sortByBirthYear(siblings);
+      const firstGivens = orderedSibs.slice(0, 2).map((id) => givenName(personById(id)?.name)).filter(Boolean);
+      const rest = siblings.length - firstGivens.length;
+      siblingStr = firstGivens.length
+        ? `, one of ${totalChildren} children alongside ${formatNameList(firstGivens)} and ${rest} other${rest === 1 ? "" : "s"}`
         : `, one of ${totalChildren} children`;
+    }
     originParts.push(`${given} was the child of ${formatNameList(parents)}${siblingStr}.`);
     // If a parent died while this person was still a child (under 18), name
     // the loss in the origin paragraph — early parental death often shaped the
