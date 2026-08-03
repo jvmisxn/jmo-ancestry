@@ -2480,8 +2480,13 @@ function evidenceStatusLabel(status) {
 
 function cleanSourceLabel(label, repository) {
   if (!label || !repository) return label || "";
+  // Also try the repository base name (domain without TLD) so "Ancestry source:"
+  // is stripped when the badge already shows "ancestry.com".
+  const escaped = repository.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const base = repository.replace(/\.[a-z]{2,}$/i, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = base && base !== escaped ? `(?:${escaped}|${base})` : escaped;
   const stripped = label.replace(
-    new RegExp(`^${repository.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\s*(source|record|entry)?\\s*[:\\-–]\\s*`, "i"),
+    new RegExp(`^${pattern}\\s*(source|record|entry)?\\s*[:\\-–]\\s*`, "i"),
     "",
   ).trim();
   return stripped || label;
