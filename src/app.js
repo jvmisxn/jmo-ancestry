@@ -503,7 +503,7 @@ function renderWorkspaceSummary() {
 // search can match occupations, towns, and events that only appear in the
 // narrative. Story fields may be a string or an array of paragraphs.
 function storyText(person) {
-  return [person.profile?.article, person.lifeStory, person.profile?.summary]
+  return [person.profile?.article, person.profile?.bio, person.lifeStory, person.profile?.summary]
     .flat()
     .filter((part) => typeof part === "string")
     .join(" ");
@@ -1507,7 +1507,7 @@ function renderLifeStory(person) {
   const summary = typeof rawSummary === "string" && rawSummary.includes("appears in the JMO Ancestry working tree")
     ? null
     : rawSummary;
-  const story = person.profile?.article || person.lifeStory || summary || generatedLifeStory(person);
+  const story = person.profile?.article || person.profile?.bio || person.lifeStory || summary || generatedLifeStory(person);
   const paragraphs = Array.isArray(story) ? story : splitParagraphs(story);
 
   els.detailStory.replaceChildren();
