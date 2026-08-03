@@ -1792,11 +1792,22 @@ function generatedLifeStory(person) {
   const spouseNames = namesForIds(spouseIds);
   const childIds = orderedChildren([person.id], index);
   const given = givenName(person.name);
-  const intro = `${person.name}${years ? ` (${years})` : ""}`;
-  // Strip parenthetical qualifiers (e.g. "(Immigrant)", "(Arrival 1635 on \"Elizabeth\")")
-  // before extracting the nickname so quoted text inside parens (like a ship name) is
-  // not mistaken for a personal nickname. Also match single-quoted nicknames ('Narcie').
-  const nameForNick = String(person.name || "").replace(/\([^)]*\)/g, " ").trim();
+  // Strip parenthetical qualifiers from the name for prose use. Research annotations
+  // like "(1624)", "(Immigrant)", "(Eng to MA)", "(Arrival 1635 on \"Elizabeth\")"
+  // are baked into some names in the data; leaving them produces cluttered intros like
+  // "Isaac Graves (1624) (Immigrant) (Eng to MA) (1624–1677) was born…".
+  // Collect each parenthetical so immigration info can be surfaced separately.
+  const nameParentheticals = [];
+  const cleanName = String(person.name || "")
+    .replace(/\(([^)]*)\)/g, (_, inner) => { nameParentheticals.push(inner); return ""; })
+    .replace(/\s*\([^)]*$/, "")  // strip unclosed trailing paren (truncated data)
+    .replace(/\s+/g, " ")
+    .trim();
+  const intro = `${cleanName}${years ? ` (${years})` : ""}`;
+  // Nickname extraction uses the same cleaned name so parenthesised ship names
+  // (e.g. "Elizabeth" in "(Arrival 1635 on \"Elizabeth\")") are not mistaken for
+  // personal nicknames. Also match single-quoted nicknames ('Narcie').
+  const nameForNick = cleanName;
   const nicknameMatch = nameForNick.match(/"([^"]+)"/) || nameForNick.match(/\s'([^']+)'/);
   const nicknameFull = nicknameMatch ? (nicknameMatch[1]) : null;
   const nickname = nicknameFull && nicknameFull !== given ? nicknameFull : null;
@@ -1814,6 +1825,24 @@ function generatedLifeStory(person) {
   const originParts = [];
   originParts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
   if (nickname) originParts.push(`${given} was known as ${nickname}.`);
+  // Surface ship-arrival or general immigration facts from name annotations.
+  // Annotations like "(Arrival 1635 on \"Elizabeth\")" and "(Immigrant)" carry
+  // genealogically significant events that should appear in the narrative.
+  const hasImmigrantFlag = nameParentheticals.some((p) => /\bimmigrant\b/i.test(p));
+  const arrivalParen = nameParentheticals.find((p) => /\barrival\b/i.test(p));
+  if (arrivalParen) {
+    const shipMatch = arrivalParen.match(/arrival\s+(\d{4})\s+on\s+"([^"]+)"/i);
+    if (shipMatch) {
+      originParts.push(`${given} arrived in the American colonies in ${shipMatch[1]} aboard the ${shipMatch[2]}.`);
+    } else {
+      const yearMatch = arrivalParen.match(/arrival\s+(\d{4})/i);
+      originParts.push(yearMatch
+        ? `${given} arrived in the American colonies in ${yearMatch[1]}.`
+        : `${given} immigrated to the American colonies.`);
+    }
+  } else if (hasImmigrantFlag) {
+    originParts.push(`${given} immigrated to the American colonies.`);
+  }
   if (parents.length) {
     const siblingIds = new Set();
     for (const parentId of (index.get(person.id)?.parents || [])) {
