@@ -1573,7 +1573,13 @@ function storyNameIndex() {
   const map = new Map();
   for (const person of people()) {
     const full = String(person.name || "").replace(/\s+/g, " ").trim();
-    for (const variant of new Set([full, strippedName(full)])) {
+    const candidates = new Set([full, strippedName(full)]);
+    for (const alias of (person.aliases || [])) {
+      const a = String(alias || "").replace(/\s+/g, " ").trim();
+      candidates.add(a);
+      candidates.add(strippedName(a));
+    }
+    for (const variant of candidates) {
       if (!variant || !variant.includes(" ")) continue;
       if (!map.has(variant)) map.set(variant, new Set());
       map.get(variant).add(person.id);
