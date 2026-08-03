@@ -1903,8 +1903,12 @@ function generatedLifeStory(person) {
   for (const src of censusSrcs) {
     const yr = sourceEventYear(src, birthNum, deathNum);
     if (yr === null) continue;
+    const loc = extractCensusLocation(src.label || src.title || "");
     if (!censusYearMap.has(yr)) {
-      censusYearMap.set(yr, extractCensusLocation(src.label || src.title || ""));
+      censusYearMap.set(yr, loc);
+    } else if (loc && !censusYearMap.get(yr)) {
+      // Prefer a location-bearing source over a bare "Ancestry source: … Census" entry
+      censusYearMap.set(yr, loc);
     }
   }
   const censusYears = [...censusYearMap.keys()].sort((a, b) => a - b);
