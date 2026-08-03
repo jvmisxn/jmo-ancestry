@@ -1985,6 +1985,29 @@ function generatedLifeStory(person) {
             ? `${given} married ${a.name} (${aYear}) and, widowed in ${firstSpouseDeath}, later married ${b.name}.`
             : `${given} was married to ${a.name} (${aYear}) and ${b.name}.`,
         );
+      } else if (spouseEntries.length >= 3) {
+        // Three or more spouses: sort chronologically by resolved year so the
+        // sequence reads naturally, then use "married N times: first to A, then
+        // to B, and finally to C" phrasing so it's clear these were sequential
+        // unions rather than simultaneous ones.
+        const sorted = [...spouseEntries].sort((a, b) => {
+          if (!a.m && !b.m) return 0;
+          if (!a.m) return 1;
+          if (!b.m) return -1;
+          return a.m.year - b.m.year;
+        });
+        const countWords = ["", "once", "twice", "three times", "four times", "five times"];
+        const countStr = countWords[sorted.length] || `${sorted.length} times`;
+        const parts = sorted.map(({ name, m, ageNote }) =>
+          m ? `${name} (${m.estimated ? "~" : ""}${m.year}${ageNote})` : name,
+        );
+        const labeled = parts.map((part, i) => {
+          if (i === 0) return `first to ${part}`;
+          if (i === sorted.length - 1) return `finally to ${part}`;
+          return `then to ${part}`;
+        });
+        const joined = `${labeled.slice(0, -1).join(", ")}, and ${labeled[labeled.length - 1]}`;
+        paragraphs.push(`${given} married ${countStr}: ${joined}.`);
       } else {
         const parts = spouseEntries.map(({ name, m, ageNote }) => {
           if (!m) return name;
