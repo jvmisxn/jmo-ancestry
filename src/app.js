@@ -1941,7 +1941,13 @@ function generatedLifeStory(person) {
       const givens = survivingChildren.map((cid) => givenName(personById(cid)?.name));
       survivedBy.push(`children ${formatNameList(givens)}`);
     } else if (survivingChildren.length > 3) {
-      survivedBy.push(`${survivingChildren.length} children`);
+      const preview = survivingChildren.slice(0, 2)
+        .map((cid) => givenName(personById(cid)?.name))
+        .filter(Boolean);
+      const previewStr = formatNameList(preview);
+      survivedBy.push(preview.length
+        ? `${survivingChildren.length} children (including ${previewStr})`
+        : `${survivingChildren.length} children`);
     }
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
