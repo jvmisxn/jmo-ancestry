@@ -1923,16 +1923,24 @@ function generatedLifeStory(person) {
     }
   }
   const censusYears = [...censusYearMap.keys()].sort((a, b) => a - b);
+  // Helper: append "(age N)" when birth year is known and yields a plausible age.
+  const censusAgeStr = (year) => {
+    if (birthNum === null) return "";
+    const a = year - birthNum;
+    return (a >= 0 && a <= 100) ? ` (age ${a})` : "";
+  };
   if (censusYears.length === 1) {
     const loc = censusYearMap.get(censusYears[0]);
     const locStr = loc ? ` in ${loc}` : "";
-    familyParts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}.`);
+    familyParts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}${censusAgeStr(censusYears[0])}.`);
   } else if (censusYears.length >= 2) {
     const last = censusYears[censusYears.length - 1];
     const rest = censusYears.slice(0, -1);
     const locations = [...new Set(censusYears.map((y) => censusYearMap.get(y)).filter(Boolean))];
     if (locations.length === 1) {
-      familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last} in ${locations[0]}.`);
+      const yearsWithAges = [...rest.map((y) => `${y}${censusAgeStr(y)}`), `${last}${censusAgeStr(last)}`];
+      const [allButLast2, lastItem] = [yearsWithAges.slice(0, -1), yearsWithAges[yearsWithAges.length - 1]];
+      familyParts.push(`${given} appears in U.S. census records from ${allButLast2.join(", ")} and ${lastItem} in ${locations[0]}.`);
     } else if (censusYears.length === 2) {
       // Two census years with different (or partially-missing) locations — name each pair so
       // geographic movement is visible ("in Allen County, Kentucky" → "in Warren County, Kentucky").
@@ -1940,7 +1948,7 @@ function generatedLifeStory(person) {
       const loc1 = censusYearMap.get(censusYears[1]);
       const str0 = loc0 ? `the ${censusYears[0]} U.S. census in ${loc0}` : `the ${censusYears[0]} U.S. census`;
       const str1 = loc1 ? `the ${censusYears[1]} census in ${loc1}` : `the ${censusYears[1]} census`;
-      familyParts.push(`${given} appears in ${str0} and ${str1}.`);
+      familyParts.push(`${given} appears in ${str0}${censusAgeStr(censusYears[0])} and ${str1}${censusAgeStr(censusYears[1])}.`);
     } else {
       // 3+ census years with multiple distinct locations — build per-year phrases
       // matching the 2-census format so geographic movement is visible in the story.
@@ -1949,12 +1957,13 @@ function generatedLifeStory(person) {
         const yearPhrases = censusYears.map((y, i) => {
           const loc = censusYearMap.get(y);
           const label = i === 0 ? `the ${y} U.S. census` : `the ${y} census`;
-          return loc ? `${label} in ${loc}` : label;
+          return loc ? `${label} in ${loc}${censusAgeStr(y)}` : `${label}${censusAgeStr(y)}`;
         });
         const allButLast = yearPhrases.slice(0, -1).join("; ");
         familyParts.push(`${given} appears in ${allButLast}; and ${yearPhrases[yearPhrases.length - 1]}.`);
       } else {
-        familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
+        const yearsWithAges = censusYears.map((y) => `${y}${censusAgeStr(y)}`);
+        familyParts.push(`${given} appears in U.S. census records from ${yearsWithAges.slice(0, -1).join(", ")} and ${yearsWithAges[yearsWithAges.length - 1]}.`);
       }
     }
   }
