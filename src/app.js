@@ -1678,7 +1678,7 @@ function extractCensusLocation(label) {
 //   "buried Cemetery Name"            — "buried" keyword before cemetery name
 //   "(Cemetery Name, ...)"            — parenthesised cemetery name
 // Strips plot numbers ("plot N-0-1249") to keep the sentence readable.
-function extractFagCemetery(person) {
+function extractCemeteryName(person) {
   for (const src of profileSources(person)) {
     const lbl = String(src.label || src.title || "");
     if (!/find a grave/i.test(lbl)) continue;
@@ -1693,6 +1693,15 @@ function extractFagCemetery(person) {
         .replace(/,\s*$/, "")
         .trim();
     }
+  }
+  // Cemetery transcription sources start with the cemetery name, e.g.
+  // "Prevatt Cemetery transcription, Bradford County FL: ..." or
+  // "Glenwood Cemetery Section C transcription, Todd County, Kentucky: ..."
+  for (const src of profileSources(person)) {
+    const lbl = String(src.label || src.title || "");
+    if (!/transcription/i.test(lbl)) continue;
+    const m = lbl.match(/^([A-Za-z''\- ]+Cemetery)\b/i);
+    if (m) return m[1].trim();
   }
   return null;
 }
@@ -2059,11 +2068,11 @@ function generatedLifeStory(person) {
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
-    const fagCemetery = !person.burial?.place ? extractFagCemetery(person) : null;
+    const cemetery = !person.burial?.place ? extractCemeteryName(person) : null;
     const burialProse = person.burial?.place
       ? ` ${given} is buried ${formatEventProse(person.burial)}.`
-      : fagCemetery
-        ? ` ${given} is buried in ${trimUsaCountry(fagCemetery)}.`
+      : cemetery
+        ? ` ${given} is buried in ${trimUsaCountry(cemetery)}.`
         : "";
     paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}.${burialProse}`);
   } else if (person.burial?.place) {
