@@ -2194,10 +2194,12 @@ function generatedLifeStory(person) {
   // Para 4: death — include who the person left behind so the story closes
   // with the same family context the life timeline shows for the death event.
   if (death) {
-    const ageStr = !age ? ""
-      : age.years === 0 ? (age.approx ? ", likely in infancy" : ", in infancy")
-      : age.approx ? `, about age ${age.years}`
-      : `, aged ${age.years}`;
+    // Build age prose without a leading comma so it composes cleanly with
+    // deathProse via a simple join, rather than always needing a preceding value.
+    const ageProse = !age ? ""
+      : age.years === 0 ? (age.approx ? "likely in infancy" : "in infancy")
+      : age.approx ? `about age ${age.years}`
+      : `aged ${age.years}`;
     const deathYear = numericYear(person.death?.date);
     const survivingChildren = deathYear !== null
       ? childIds.filter((cid) => {
@@ -2273,12 +2275,21 @@ function generatedLifeStory(person) {
       : cemetery
         ? ` ${given} is buried in ${trimUsaCountry(cemetery)}.`
         : "";
-    // Year-only death WITH a place: the year is already in the "(YYYY–YYYY)" header, so
-    // "died 1921, in Bradford County, Florida" repeats it. Use just the place instead.
-    const deathProse = /^\d{4}$/.test(person.death?.date || "") && (person.death?.place || "").trim()
+    // Year-only death WITH a place: use "in [place]" — the year is already in the
+    // "(YYYY–YYYY)" header. Year-only death WITHOUT a place: when age is available,
+    // omit the redundant year and lead with "aged N" instead; when there is no age
+    // either, keep the year as the only temporal anchor in the sentence.
+    const deathIsYearOnly = /^\d{4}$/.test(person.death?.date || "");
+    const deathHasPlace = !!(person.death?.place || "").trim();
+    const deathProse = deathIsYearOnly && deathHasPlace
       ? `in ${trimUsaCountry((person.death.place || "").trim())}`
+      : deathIsYearOnly && !ageProse
+      ? death
+      : deathIsYearOnly
+      ? ""
       : death;
-    paragraphs.push(`${given} died ${deathProse}${ageStr}${survivedStr}${predeceasedStr}.${burialProse}`);
+    const deathClause = [deathProse, ageProse].filter(Boolean).join(", ");
+    paragraphs.push(`${given} died${deathClause ? ` ${deathClause}` : ""}${survivedStr}${predeceasedStr}.${burialProse}`);
   } else if (person.burial?.place) {
     paragraphs.push(`${given} is buried ${formatEventProse(person.burial)}.`);
   }
