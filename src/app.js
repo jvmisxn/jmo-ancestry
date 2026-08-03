@@ -1752,6 +1752,31 @@ function generatedLifeStory(person) {
         ? `, one of ${totalChildren} children alongside ${formatNameList(namesForIds(siblings))}`
         : `, one of ${totalChildren} children`;
     originParts.push(`${given} was the child of ${formatNameList(parents)}${siblingStr}.`);
+    // If a parent died while this person was still a child (under 18), name
+    // the loss in the origin paragraph — early parental death often shaped the
+    // rest of a person's life through guardianship, early work, or remarriage.
+    if (birthNum !== null) {
+      const earlyLosses = [...(index.get(person.id)?.parents || [])]
+        .map((pid) => {
+          const parent = personById(pid);
+          if (!parent) return null;
+          const pdeathNum = numericYear(parent.death?.date);
+          if (pdeathNum === null) return null;
+          const ageAtLoss = pdeathNum - birthNum;
+          if (ageAtLoss < 0 || ageAtLoss > 17) return null;
+          return { name: parent.name, year: pdeathNum, age: ageAtLoss };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.year - b.year);
+      for (const loss of earlyLosses) {
+        const ageDesc = loss.age === 0
+          ? `leaving ${given} an infant`
+          : loss.age === 1
+            ? `leaving ${given} just a year old`
+            : `leaving ${given} ${loss.age} years old`;
+        originParts.push(`${loss.name} died in ${loss.year}, ${ageDesc}.`);
+      }
+    }
   }
   paragraphs.push(originParts.join(" "));
 
