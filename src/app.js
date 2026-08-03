@@ -1508,7 +1508,30 @@ function renderLifeStory(person) {
     ? null
     : rawSummary;
   const story = person.profile?.article || person.profile?.bio || person.lifeStory || summary || generatedLifeStory(person);
-  const paragraphs = Array.isArray(story) ? story : splitParagraphs(story);
+  let paragraphs = Array.isArray(story) ? story : splitParagraphs(story);
+
+  // When a real hand-crafted summary is the story source, supplement it with
+  // generated event paragraphs (marriage, family, death) that the summary
+  // doesn't already cover. The origin paragraph (index 0) is skipped because
+  // summaries always open with birth and parentage context. Topic guards
+  // prevent doubling up on events the author already narrated.
+  if (summary && story === summary) {
+    const extras = generatedLifeStory(person).slice(1);
+    if (extras.length) {
+      const summaryLower = summary.toLowerCase();
+      const hasMarriage = /\b(married|marriage|wed|spouse|husband|wife)\b/.test(summaryLower);
+      const hasDeath = /\b(died|death|passed|buried|laid to rest)\b/.test(summaryLower);
+      const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
+      const filtered = extras.filter((para) => {
+        const p = para.toLowerCase();
+        if (hasMarriage && /\bmarried\b/.test(p)) return false;
+        if (hasDeath && /\bdied\b/.test(p)) return false;
+        if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
+        return true;
+      });
+      if (filtered.length) paragraphs = [...paragraphs, ...filtered];
+    }
+  }
 
   els.detailStory.replaceChildren();
   if (allObituaries.length) {
