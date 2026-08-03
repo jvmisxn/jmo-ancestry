@@ -530,6 +530,7 @@ function personSearchIndex() {
       haystack: [
         person.name,
         person.birth?.place,
+        person.burial?.place,
         person.death?.place,
         person.birth?.date,
         person.death?.date,
@@ -752,6 +753,7 @@ function renderDetails() {
   els.detailFacts.replaceChildren(
     fact("Born", formatEvent(person.birth)),
     fact("Died", formatEvent(person.death)),
+    fact("Buried", formatEvent(person.burial)),
     fact("Known as", person.aliases?.join(", ")),
     tagListFact(person),
   );
@@ -1826,7 +1828,10 @@ function generatedLifeStory(person) {
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
-    paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}.`);
+    const burialProse = person.burial?.place ? ` ${given} is buried ${formatEventProse(person.burial)}.` : "";
+    paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}.${burialProse}`);
+  } else if (person.burial?.place) {
+    paragraphs.push(`${given} is buried ${formatEventProse(person.burial)}.`);
   }
 
   return paragraphs;
