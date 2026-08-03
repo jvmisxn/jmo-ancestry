@@ -1757,7 +1757,12 @@ function generatedLifeStory(person) {
       const firstNames = namesForIds(childIds.slice(0, 3));
       familyParts.push(`${given} had ${childIds.length} children, including ${formatNameList(firstNames)}${spanStr}.`);
     } else {
-      familyParts.push(`Known children include ${formatNameList(namesForIds(childIds))}${spanStr}.`);
+      const countWords = ["one", "two", "three", "four"];
+      const countWord = countWords[childIds.length - 1] || String(childIds.length);
+      const nameList = formatNameList(namesForIds(childIds));
+      familyParts.push(childIds.length === 1
+        ? `${given} had one recorded child, ${nameList}${spanStr}.`
+        : `${given} had ${countWord} recorded children: ${nameList}${spanStr}.`);
     }
   }
 
