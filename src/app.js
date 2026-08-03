@@ -1522,11 +1522,13 @@ function renderLifeStory(person) {
       const hasMarriage = /\b(married|marriage|wed|spouse|husband|wife)\b/.test(summaryLower);
       const hasDeath = /\b(died|death|passed|buried|laid to rest)\b/.test(summaryLower);
       const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
+      const hasCensus = /\bcensus\b/.test(summaryLower);
       const filtered = extras.filter((para) => {
         const p = para.toLowerCase();
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
         if (hasDeath && /\bdied\b/.test(p)) return false;
         if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
+        if (hasCensus && /\bcensus\b/.test(p)) return false;
         return true;
       });
       if (filtered.length) paragraphs = [...paragraphs, ...filtered];
