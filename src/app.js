@@ -1983,6 +1983,15 @@ function generatedLifeStory(person) {
     if (draftWars.has(war)) familyParts.push(`${given} registered for the World War ${war} draft.`);
   }
 
+  // VA BIRLS Death File is maintained by the Department of Veterans Affairs and
+  // specifically covers people who served in the U.S. military — stronger than a
+  // draft card (which only proves registration). Surface this as "served in the
+  // U.S. military" so it appears in the narrative, not only in the sources list.
+  const hasBirls = profileSources(person).some((src) =>
+    /veterans affairs|birls/i.test(String(src.label || src.title || ""))
+  );
+  if (hasBirls) familyParts.push(`${given} served in the U.S. military.`);
+
   if (familyParts.length) paragraphs.push(familyParts.join(" "));
 
   // Para 4: death — include who the person left behind so the story closes
