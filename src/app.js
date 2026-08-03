@@ -2050,6 +2050,16 @@ function generatedLifeStory(person) {
           return spouseDeath === null || spouseDeath > deathYear;
         })
       : [];
+    // Spouses who died strictly before this person — named in the death sentence
+    // ("predeceased by Mary") so the reader sees the loss without opening each
+    // profile. Only fires when both death years are known and unambiguous.
+    const predeceasedSpouses = deathYear !== null
+      ? spouseIds.filter((sid) => {
+          const spouse = personById(sid);
+          const spouseDeath = numericYear(spouse?.death?.date);
+          return spouseDeath !== null && spouseDeath < deathYear;
+        })
+      : [];
     const survivedBy = [];
     if (survivingChildren.length === 1) {
       survivedBy.push(`child ${givenName(personById(survivingChildren[0])?.name)}`);
@@ -2068,13 +2078,17 @@ function generatedLifeStory(person) {
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
+    const predeceasedNames = predeceasedSpouses.map((sid) => givenName(personById(sid)?.name)).filter(Boolean);
+    const predeceasedStr = predeceasedNames.length
+      ? `, predeceased by ${formatNameList(predeceasedNames)}`
+      : "";
     const cemetery = !person.burial?.place ? extractCemeteryName(person) : null;
     const burialProse = person.burial?.place
       ? ` ${given} is buried ${formatEventProse(person.burial)}.`
       : cemetery
         ? ` ${given} is buried in ${trimUsaCountry(cemetery)}.`
         : "";
-    paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}.${burialProse}`);
+    paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}${predeceasedStr}.${burialProse}`);
   } else if (person.burial?.place) {
     paragraphs.push(`${given} is buried ${formatEventProse(person.burial)}.`);
   }
