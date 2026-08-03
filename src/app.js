@@ -1650,7 +1650,7 @@ function appendStoryParagraph(paragraph, text, selfId, nameIndex, closeIds) {
     link.className = "story-person-link";
     link.href = `#p=${encodeURIComponent(mention.id)}`;
     link.textContent = text.slice(mention.start, mention.end);
-    link.title = `Open ${personById(mention.id)?.name || "this person"}'s profile`;
+    link.title = `Open ${cardDisplayName(personById(mention.id)?.name || "") || "this person"}'s profile`;
     link.addEventListener("click", (event) => {
       event.preventDefault();
       selectPerson(mention.id, false, true);
@@ -4701,7 +4701,7 @@ function linkGroup(label, ids = [], noteById = null) {
     const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "Open profile";
     button.innerHTML = `
       <span class="relation-name">
-        <strong>${escapeHtml(person?.name || id)}</strong>
+        <strong>${escapeHtml(cardDisplayName(person?.name || id))}</strong>
         <small>${escapeHtml(formatYears(person || {}))}</small>
       </span>
       <small class="relation-meta">${escapeHtml(meta)}</small>
@@ -4751,7 +4751,7 @@ function renderPersonRow(person, term = "") {
   const meta = [kinshipNote, placeNote].filter(Boolean).join(" • ") || "No date or place details yet.";
   body.innerHTML = `
     <span class="person-row-main">
-      <span class="person-row-name">${escapeHtml(person.name)}</span>
+      <span class="person-row-name">${escapeHtml(cardDisplayName(person.name))}</span>
       <small class="person-row-years">${escapeHtml(formatYears(person) || "")}</small>
     </span>
     <small class="person-row-meta">${escapeHtml(meta)}</small>
