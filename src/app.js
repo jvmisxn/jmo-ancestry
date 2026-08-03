@@ -729,12 +729,12 @@ function renderDetails() {
   const kinship = root ? kinshipLabel(person.id, root.id) : "";
   const age = ageAtDeath(person);
   const liveAge = currentAgeLabel(person);
-  els.detailName.textContent = person.name;
+  els.detailName.textContent = cardDisplayName(person.name);
   els.detailContext.textContent = person.id === root?.id
     ? "Selected person and current tree focus."
     : kinship
-      ? `${root.name}'s ${kinship}.`
-      : `Selected profile while the tree stays focused on ${root?.name || person.name}.`;
+      ? `${cardDisplayName(root.name)}'s ${kinship}.`
+      : `Selected profile while the tree stays focused on ${cardDisplayName(root?.name || person.name)}.`;
   els.detailMeta.replaceChildren(
     ...[
       metaPill(formatYears(person) || "Dates pending"),
@@ -2726,8 +2726,8 @@ function renderTree() {
   const collateralCount = nodes.length - directCount;
 
   els.title.textContent = state.collapseCollateral ? `Minimal tree for ${root.name}` : `Full network for ${root.name}`;
-  els.treeFocusName.textContent = root.name;
-  els.selectedName.textContent = selected.name;
+  els.treeFocusName.textContent = cardDisplayName(root.name);
+  els.selectedName.textContent = cardDisplayName(selected.name);
   const selectedKinship = selected.id === root.id ? "" : kinshipLabel(selected.id, root.id, index);
   els.selectedContext.textContent = selected.id === root.id
     ? "Selected person matches the current tree focus."
@@ -2973,7 +2973,7 @@ function renderTree() {
       }));
     }
     renderTreePortrait(group, node.person);
-    const nameLines = nodeNameLines(node.person.name);
+    const nameLines = nodeNameLines(cardDisplayName(node.person.name));
     if (nameLines.length === 1) {
       group.append(svgText(nameLines[0], NODE.textX, -7, "node-name"));
       group.append(svgText(formatYears(node.person), NODE.textX, 16, "node-years"));
@@ -5251,6 +5251,20 @@ function splitParagraphs(value = "") {
 // two halves instead; only a name too long for even two lines still truncates.
 const NODE_NAME_LINE_LIMIT = 21;
 
+// Strip researcher parenthetical annotations from a name for display use in
+// the tree card and focus bar. Annotations like "(1624)", "(Immigrant)",
+// "(Eng to MA)", "(Petree)", and "(people list the wrong parents)" are data
+// management notes baked into source names; they clutter compact display
+// surfaces and should be removed. Quoted nicknames (e.g. "Fanny", 'Narcie')
+// are not in parentheses so they survive this cleaning unchanged.
+function cardDisplayName(name) {
+  return String(name || "")
+    .replace(/\s*\([^)]*\)/g, "")
+    .replace(/\s*\([^)]*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function nodeNameLines(name = "") {
   const clean = String(name).replace(/\s+/g, " ").trim();
   if (clean.length <= NODE_NAME_LINE_LIMIT) return [clean];
@@ -5382,6 +5396,7 @@ export const __test = {
   generationRowLabel,
   treeBounds,
   nodeNameLines,
+  cardDisplayName,
   tagStatusTone,
   tagStatusRank,
   researchStatusPills,
