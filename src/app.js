@@ -1485,6 +1485,19 @@ function enablePhotoLightbox() {
 
 function renderLifeStory(person) {
   const obituaries = profileObituaries(person);
+  // Sources labelled "obituary" that aren't already in profile.obituaries also
+  // deserve kicker badges. Skip Ancestry search URLs (index records, not full
+  // obituary text) and any URL already covered by profile.obituaries.
+  const seenObitUrls = new Set(obituaries.map((o) => o.url).filter(Boolean));
+  const sourceKickers = profileSources(person)
+    .filter((src) =>
+      /\bobituary\b/i.test(src.label || src.title || "") &&
+      src.url &&
+      !/ancestry\.com\/search\//.test(src.url) &&
+      !seenObitUrls.has(src.url),
+    )
+    .map((src) => ({ url: src.url, title: src.label || src.title, publication: src.repository }));
+  const allObituaries = [...obituaries, ...sourceKickers];
   // Summaries that are auto-generated placeholder text ("appears in the JMO Ancestry
   // working tree") read worse than the derived story — skip them so the generated
   // prose shows instead. Hand-crafted summaries don't contain this phrase.
@@ -1496,10 +1509,10 @@ function renderLifeStory(person) {
   const paragraphs = Array.isArray(story) ? story : splitParagraphs(story);
 
   els.detailStory.replaceChildren();
-  if (obituaries.length) {
+  if (allObituaries.length) {
     const row = document.createElement("div");
     row.className = "story-kickers";
-    for (const obituary of obituaries) row.append(obituaryKicker(obituary, person));
+    for (const obituary of allObituaries) row.append(obituaryKicker(obituary, person));
     els.detailStory.append(row);
   }
 
@@ -1518,7 +1531,12 @@ function obituaryKicker(obituary, person) {
   const badge = document.createElement(obituary.url ? "a" : "p");
   badge.className = "story-kicker";
   const subject = obituarySubject(obituary.title);
-  if (subject && !obituarySubjectIsPerson(subject, person.name)) {
+  // Treat the subject as a person's name only when it looks like one: no
+  // slashes, pipes, or ampersands (publication separators) and no more than
+  // five tokens. Publication strings like "Atlanta Journal-Constitution / Legacy"
+  // must not trigger "Mentioned in … obituary".
+  const subjectIsPersonName = subject && !/[/|&]/.test(subject) && subject.split(/\s+/).length <= 5;
+  if (subjectIsPersonName && !obituarySubjectIsPerson(subject, person.name)) {
     badge.textContent = `Mentioned in ${subject}'s obituary`;
   } else {
     badge.textContent = obituary.publication
