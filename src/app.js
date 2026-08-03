@@ -2086,12 +2086,26 @@ function generatedLifeStory(person) {
 
   // VA BIRLS Death File is maintained by the Department of Veterans Affairs and
   // specifically covers people who served in the U.S. military — stronger than a
-  // draft card (which only proves registration). Surface this as "served in the
-  // U.S. military" so it appears in the narrative, not only in the sources list.
+  // draft card (which only proves registration). Also surface when the person
+  // carries an explicit "veteran" tag or source labels name a confirmed military
+  // service (e.g. a Find a Grave memorial noting a military marker). When a
+  // branch abbreviation is present, name it; otherwise fall back to "U.S. military".
   const hasBirls = profileSources(person).some((src) =>
     /veterans affairs|birls/i.test(String(src.label || src.title || ""))
   );
-  if (hasBirls) familyParts.push(`${given} served in the U.S. military.`);
+  const hasVeteranTag = (person.tags || []).some((tag) => /^veteran$/i.test(tag));
+  if (hasBirls || hasVeteranTag) {
+    const allSourceText = profileSources(person)
+      .map((src) => String(src.label || src.title || "")).join(" ");
+    const branch = /\bUSAF\b|U\.S\.?\s*Air\s*Force/i.test(allSourceText) ? "Air Force"
+      : /\bUSMC\b|U\.S\.?\s*Marine|Marine\s*Corps/i.test(allSourceText) ? "Marine Corps"
+      : /\bUSN\b|U\.S\.?\s*Navy/i.test(allSourceText) ? "Navy"
+      : /\bU\.?S\.?\s*Army\b/i.test(allSourceText) ? "Army"
+      : null;
+    familyParts.push(branch
+      ? `${given} served in the U.S. ${branch}.`
+      : `${given} served in the U.S. military.`);
+  }
 
   if (familyParts.length) paragraphs.push(familyParts.join(" "));
 
