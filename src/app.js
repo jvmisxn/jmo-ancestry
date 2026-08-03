@@ -1706,6 +1706,35 @@ function extractCemeteryName(person) {
   return null;
 }
 
+// Extracts the U.S. state (or county+state) where a marriage was recorded from
+// source labels shaped like "Ancestry source: Tennessee, U.S., Marriage Records"
+// or "Ancestry source: Alachua County, Florida, Marriage Records". Returns the
+// location string (without trailing country name) or null when no match is found.
+function resolveMarriagePlace(person, spouseId) {
+  const spouse = personById(spouseId);
+  if (!spouse) return null;
+  const sources = [...profileSources(person), ...profileSources(spouse)];
+  for (const src of sources) {
+    const label = String(src.label || src.title || "");
+    if (!/marriage|married|wedding/i.test(label)) continue;
+    // "Ancestry source: Tennessee, U.S., Marriage Records" → "Tennessee"
+    // "Ancestry source: Alachua County, Florida, Marriage Records" → "Alachua County, Florida"
+    // "Ancestry source: Tennessee, U.S., Marriage Records" → "Tennessee"
+    let m = label.match(
+      /Ancestry\s+source:\s*(.+?),\s*U\.?S\.?A?\.?\s*[,.]?\s*(?:Marriage|Vital|Wedding)/i,
+    );
+    if (m) return trimUsaCountry(m[1].trim());
+    // "Ancestry source: Alachua County, Florida, Marriage Records" (no U.S. separator)
+    m = label.match(/Ancestry\s+source:\s*([A-Za-z][\w\s,]+?),\s*(?:Marriage|Vital|Wedding)/i);
+    if (m) {
+      const place = m[1].trim();
+      if (/^U\.?S\.?A?\.?$|^United States/i.test(place)) continue;
+      return trimUsaCountry(place);
+    }
+  }
+  return null;
+}
+
 // Resolves a marriage year for person+spouse using the same two-pass logic as
 // the timeline: (1) scan marriage-record sources on either person for a label
 // year, (2) fall back to the earliest shared child's birth year minus one.
@@ -1842,7 +1871,9 @@ function generatedLifeStory(person) {
     const ageStr = marriageAge !== null && marriageAge >= 14 && marriageAge <= 80
       ? `, at ${m.estimated ? "about " : ""}age ${marriageAge}`
       : "";
-    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${ageStr}.`);
+    const marriagePlace = resolveMarriagePlace(person, spouseIds[0]);
+    const placeStr = marriagePlace ? `, in ${marriagePlace}` : "";
+    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${ageStr}${placeStr}.`);
   } else if (spouseIds.length > 1) {
     const spouseEntries = spouseIds.map((sid) => {
       const name = personById(sid)?.name;
