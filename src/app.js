@@ -1756,8 +1756,13 @@ function generatedLifeStory(person) {
   const childIds = orderedChildren([person.id], index);
   const given = givenName(person.name);
   const intro = `${person.name}${years ? ` (${years})` : ""}`;
-  const nicknameMatch = String(person.name || "").match(/"([^"]+)"/);
-  const nickname = nicknameMatch && nicknameMatch[1] !== given ? nicknameMatch[1] : null;
+  // Strip parenthetical qualifiers (e.g. "(Immigrant)", "(Arrival 1635 on \"Elizabeth\")")
+  // before extracting the nickname so quoted text inside parens (like a ship name) is
+  // not mistaken for a personal nickname. Also match single-quoted nicknames ('Narcie').
+  const nameForNick = String(person.name || "").replace(/\([^)]*\)/g, " ").trim();
+  const nicknameMatch = nameForNick.match(/"([^"]+)"/) || nameForNick.match(/\s'([^']+)'/);
+  const nicknameFull = nicknameMatch ? (nicknameMatch[1]) : null;
+  const nickname = nicknameFull && nicknameFull !== given ? nicknameFull : null;
   const birthNum = numericYear(person.birth?.date);
   const deathNum = numericYear(person.death?.date);
 
@@ -1765,9 +1770,10 @@ function generatedLifeStory(person) {
 
   // Para 1: origin — birth fact and parentage, with sibling count when others
   // are linked through the same parents so the reader gets family-size context.
-  // When the name carries a quoted nickname (e.g. Sarah Francis "Fanny" Perry),
-  // add a "known as" sentence so the rest of the story's first-name references
-  // make sense to a reader who only knows the familiar form.
+  // When the name carries a quoted nickname (e.g. Sarah Francis "Fanny" Perry or
+  // Narcisus Ann 'Narcie' Meador), add a "known as" sentence so the rest of the
+  // story's first-name references make sense to a reader who only knows the
+  // familiar form.
   const originParts = [];
   originParts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
   if (nickname) originParts.push(`${given} was known as ${nickname}.`);
