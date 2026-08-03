@@ -134,6 +134,43 @@ check(
   "John first married Jane Doe (1905, age 25), and later married Mary Brown (~1919, ~age 39).",
 );
 
+// 5. Two spouses listed in reverse order in data (second married first) — should
+//    still produce "first married … later married …" after chronological sort.
+check(
+  "two spouses — data order reversed relative to marriage years",
+  storyFor({
+    people: [
+      {
+        id: "john",
+        name: "John Smith",
+        birth: { date: "1880" },
+        spouses: ["mary", "jane"],
+        parents: [],
+        children: ["kid1", "kid2"],
+      },
+      {
+        id: "jane",
+        name: "Jane Doe",
+        parents: [],
+        children: ["kid1"],
+        spouses: ["john"],
+        sources: [{ label: "1905 Marriage Record, Indiana", url: "http://example.com/m1" }],
+      },
+      {
+        id: "mary",
+        name: "Mary Brown",
+        parents: [],
+        children: ["kid2"],
+        spouses: ["john"],
+        sources: [{ label: "1920 Marriage Record, Ohio", url: "http://example.com/m2" }],
+      },
+      { id: "kid1", name: "Sam Smith", birth: { date: "1906" }, parents: ["john", "jane"], children: [] },
+      { id: "kid2", name: "Tom Smith", birth: { date: "1921" }, parents: ["john", "mary"], children: [] },
+    ],
+  })[1],
+  "John first married Jane Doe (1905, age 25), and later married Mary Brown (1920, age 40).",
+);
+
 if (failures === 0) {
   console.log("story-marriage-year: all checks passed");
 } else {

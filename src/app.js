@@ -1967,18 +1967,17 @@ function generatedLifeStory(person) {
         : "";
       return { sid, name, m, ageNote };
     }).filter(Boolean);
-    // For exactly two spouses where both marriages have resolvable years and
-    // they are in chronological order, use "first married … later married …"
-    // so the reader sees these were sequential, not simultaneous, unions.
-    // When the first spouse's death year falls between the two marriages,
-    // add "widowed in YYYY" so the reader understands the union ended by death
-    // rather than divorce, without having to open the first spouse's profile.
+    // For exactly two spouses where both marriages have resolvable years, use
+    // "first married … later married …" so the reader sees these were sequential
+    // unions. Sort chronologically so data entry order doesn't matter — the
+    // 3+ spouse path already does this. When the first spouse's death year falls
+    // between the two marriages, add "widowed in YYYY" so the reader understands
+    // the union ended by death rather than divorce.
     if (
       spouseEntries.length === 2
       && spouseEntries[0].m && spouseEntries[1].m
-      && spouseEntries[0].m.year <= spouseEntries[1].m.year
     ) {
-      const [a, b] = spouseEntries;
+      const [a, b] = [...spouseEntries].sort((x, y) => x.m.year - y.m.year);
       const aYear = `${a.m.estimated ? "~" : ""}${a.m.year}${a.ageNote}`;
       const bYear = `${b.m.estimated ? "~" : ""}${b.m.year}${b.ageNote}`;
       const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
@@ -1991,10 +1990,9 @@ function generatedLifeStory(person) {
           : `${given} first married ${a.name} (${aYear}), and later married ${b.name} (${bYear}).`,
       );
     } else {
-      // When exactly two spouses appear but both marriage years aren't available
-      // in the right order, check if the first entry has a year and the first
-      // spouse is deceased — that still warrants a "widowed in YYYY" note so the
-      // reader understands the reason for remarriage without opening the profile.
+      // When one or both marriage years are unknown, use more limited phrasing.
+      // If the first listed spouse has a year and is deceased, "widowed in YYYY"
+      // still warrants a note so the reader understands why there was a remarriage.
       if (
         spouseEntries.length === 2
         && spouseEntries[0].m && !spouseEntries[1].m
