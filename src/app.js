@@ -1697,13 +1697,19 @@ function generatedLifeStory(person) {
   const childIds = orderedChildren([person.id], index);
   const given = givenName(person.name);
   const intro = `${person.name}${years ? ` (${years})` : ""}`;
+  const nicknameMatch = String(person.name || "").match(/"([^"]+)"/);
+  const nickname = nicknameMatch && nicknameMatch[1] !== given ? nicknameMatch[1] : null;
 
   const paragraphs = [];
 
   // Para 1: origin — birth fact and parentage, with sibling count when others
   // are linked through the same parents so the reader gets family-size context.
+  // When the name carries a quoted nickname (e.g. Sarah Francis "Fanny" Perry),
+  // add a "known as" sentence so the rest of the story's first-name references
+  // make sense to a reader who only knows the familiar form.
   const originParts = [];
   originParts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
+  if (nickname) originParts.push(`${given} was known as ${nickname}.`);
   if (parents.length) {
     const siblingIds = new Set();
     for (const parentId of (index.get(person.id)?.parents || [])) {
