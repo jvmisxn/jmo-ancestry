@@ -1823,7 +1823,15 @@ function generatedLifeStory(person) {
   // story's first-name references make sense to a reader who only knows the
   // familiar form.
   const originParts = [];
-  originParts.push(birth ? `${intro} was born ${birth}.` : `${intro} is recorded in the family tree.`);
+  // A bare birth year (no month/day, no place) is already visible in the "(YYYY-YYYY)"
+  // header, so "was born 1913" adds nothing new and reads awkwardly alongside it.
+  // Treat it the same as no birth data so the parentage sentence can lead instead.
+  const birthYearOnly = Boolean(birth)
+    && /^\d{4}$/.test(person.birth?.date || "")
+    && !(person.birth?.place || "").trim();
+  originParts.push(birth && !birthYearOnly
+    ? `${intro} was born ${birth}.`
+    : `${intro} is recorded in the family tree.`);
   if (nickname) originParts.push(`${given} was known as ${nickname}.`);
   // Surface ship-arrival or general immigration facts from name annotations.
   // Annotations like "(Arrival 1635 on \"Elizabeth\")" and "(Immigrant)" carry
