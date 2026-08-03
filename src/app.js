@@ -1697,11 +1697,19 @@ function extractCemeteryName(person) {
   // Cemetery transcription sources start with the cemetery name, e.g.
   // "Prevatt Cemetery transcription, Bradford County FL: ..." or
   // "Glenwood Cemetery Section C transcription, Todd County, Kentucky: ..."
+  // When the label includes a county/state after "transcription,", append it
+  // so the burial sentence reads "buried in Prevatt Cemetery, Bradford County FL"
+  // instead of the bare cemetery name.
   for (const src of profileSources(person)) {
     const lbl = String(src.label || src.title || "");
     if (!/transcription/i.test(lbl)) continue;
     const m = lbl.match(/^([A-Za-z''\- ]+Cemetery)\b/i);
-    if (m) return m[1].trim();
+    if (m) {
+      const cemetery = m[1].trim();
+      const locMatch = lbl.match(/\btranscription,\s*([^:]+)/i);
+      const loc = locMatch ? locMatch[1].trim().replace(/,\s*$/, "") : null;
+      return loc && loc.length >= 3 ? `${cemetery}, ${loc}` : cemetery;
+    }
   }
   return null;
 }
