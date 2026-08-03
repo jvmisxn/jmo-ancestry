@@ -1829,8 +1829,14 @@ function generatedLifeStory(person) {
   const birthYearOnly = Boolean(birth)
     && /^\d{4}$/.test(person.birth?.date || "")
     && !(person.birth?.place || "").trim();
-  originParts.push(birth && !birthYearOnly
-    ? `${intro} was born ${birth}.`
+  // Year-only birth WITH a place: the year is already in the "(YYYY–YYYY)" header, so
+  // "was born 1790, in Caswell, North Carolina" repeats it. Use just the place instead.
+  const birthPlaceOnly = !birthYearOnly
+    && /^\d{4}$/.test(person.birth?.date || "")
+    && Boolean((person.birth?.place || "").trim());
+  const birthProse = birthPlaceOnly ? `in ${trimUsaCountry((person.birth?.place || "").trim())}` : birth;
+  originParts.push(birthProse && !birthYearOnly
+    ? `${intro} was born ${birthProse}.`
     : `${intro} is recorded in the family tree.`);
   if (nickname) originParts.push(`${given} was known as ${nickname}.`);
   // Surface ship-arrival or general immigration facts from name annotations.
@@ -2214,7 +2220,12 @@ function generatedLifeStory(person) {
       : cemetery
         ? ` ${given} is buried in ${trimUsaCountry(cemetery)}.`
         : "";
-    paragraphs.push(`${given} died ${death}${ageStr}${survivedStr}${predeceasedStr}.${burialProse}`);
+    // Year-only death WITH a place: the year is already in the "(YYYY–YYYY)" header, so
+    // "died 1921, in Bradford County, Florida" repeats it. Use just the place instead.
+    const deathProse = /^\d{4}$/.test(person.death?.date || "") && (person.death?.place || "").trim()
+      ? `in ${trimUsaCountry((person.death.place || "").trim())}`
+      : death;
+    paragraphs.push(`${given} died ${deathProse}${ageStr}${survivedStr}${predeceasedStr}.${burialProse}`);
   } else if (person.burial?.place) {
     paragraphs.push(`${given} is buried ${formatEventProse(person.burial)}.`);
   }
