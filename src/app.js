@@ -1815,8 +1815,14 @@ function generatedLifeStory(person) {
         })
       : [];
     const survivedBy = [];
-    if (survivingChildren.length === 1) survivedBy.push("one child");
-    else if (survivingChildren.length > 1) survivedBy.push(`${survivingChildren.length} children`);
+    if (survivingChildren.length === 1) {
+      survivedBy.push(`child ${givenName(personById(survivingChildren[0])?.name)}`);
+    } else if (survivingChildren.length >= 2 && survivingChildren.length <= 3) {
+      const givens = survivingChildren.map((cid) => givenName(personById(cid)?.name));
+      survivedBy.push(`children ${formatNameList(givens)}`);
+    } else if (survivingChildren.length > 3) {
+      survivedBy.push(`${survivingChildren.length} children`);
+    }
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
     const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
