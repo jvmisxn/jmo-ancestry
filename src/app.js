@@ -5080,13 +5080,24 @@ function currentAgeLabel(person) {
 }
 
 function parseDateParts(value) {
-  const match = String(value || "").match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?/);
-  if (!match) return null;
-  return {
-    year: Number(match[1]),
-    month: match[2] ? Number(match[2]) : null,
-    day: match[3] ? Number(match[3]) : null,
-  };
+  const raw = String(value || "");
+  const isoMatch = raw.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?/);
+  if (isoMatch) {
+    return {
+      year: Number(isoMatch[1]),
+      month: isoMatch[2] ? Number(isoMatch[2]) : null,
+      day: isoMatch[3] ? Number(isoMatch[3]) : null,
+    };
+  }
+  // Genealogical D-Mon-YYYY format: "23 May 1975", "4 Jul 1862"
+  const dmyMatch = raw.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (dmyMatch) {
+    const monthNum = MONTH_BY_NAME[dmyMatch[2].toLowerCase()];
+    if (monthNum) {
+      return { year: Number(dmyMatch[3]), month: monthNum, day: Number(dmyMatch[1]) };
+    }
+  }
+  return null;
 }
 
 // Year range for cards, rows, and pills. Death-only records read "d. 1954"
@@ -5119,19 +5130,38 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Lookup from full or abbreviated month name (case-insensitive) to 1-based index.
+// Used by parseDateParts and humanizeDate to handle genealogical D-Mon-YYYY dates.
+const MONTH_BY_NAME = Object.fromEntries([
+  ...MONTH_NAMES.map((name, i) => [name.toLowerCase(), i + 1]),
+  ...MONTH_NAMES.map((name, i) => [name.slice(0, 3).toLowerCase(), i + 1]),
+]);
+
 // Turn ISO-ish record dates into readable prose: "1899-03-04" → "March 4, 1899",
-// "1899-03" → "March 1899", bare years stay as-is. Anything that isn't a plain
-// ISO date ("abt 1850", "before 1900") passes through untouched so hand-written
-// research dates keep their wording.
+// "1899-03" → "March 1899", bare years stay as-is. Genealogical D-Mon-YYYY dates
+// ("23 May 1975") are normalized to "May 23, 1975". Anything else passes through
+// untouched so hand-written research dates keep their wording.
 function humanizeDate(value) {
   const raw = String(value || "").trim();
-  const match = raw.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
-  if (!match) return raw;
-  const [, year, month, day] = match;
-  if (!month) return year;
-  const monthName = MONTH_NAMES[Number(month) - 1];
-  if (!monthName) return raw;
-  return day ? `${monthName} ${Number(day)}, ${year}` : `${monthName} ${year}`;
+  const isoMatch = raw.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    if (!month) return year;
+    const monthName = MONTH_NAMES[Number(month) - 1];
+    if (!monthName) return raw;
+    return day ? `${monthName} ${Number(day)}, ${year}` : `${monthName} ${year}`;
+  }
+  // Genealogical day-month-year: "23 May 1975", "4 Jul 1862", "1 February 1901"
+  const dmyMatch = raw.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (dmyMatch) {
+    const [, day, monthStr, year] = dmyMatch;
+    const monthNum = MONTH_BY_NAME[monthStr.toLowerCase()];
+    if (monthNum) {
+      const monthName = MONTH_NAMES[monthNum - 1];
+      return `${monthName} ${Number(day)}, ${year}`;
+    }
+  }
+  return raw;
 }
 
 function formatEvent(event) {
