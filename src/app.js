@@ -1931,7 +1931,20 @@ function generatedLifeStory(person) {
       const str1 = loc1 ? `the ${censusYears[1]} census in ${loc1}` : `the ${censusYears[1]} census`;
       familyParts.push(`${given} appears in ${str0} and ${str1}.`);
     } else {
-      familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
+      // 3+ census years with multiple distinct locations — build per-year phrases
+      // matching the 2-census format so geographic movement is visible in the story.
+      const hasAnyLoc = censusYears.some((y) => censusYearMap.get(y));
+      if (hasAnyLoc) {
+        const yearPhrases = censusYears.map((y, i) => {
+          const loc = censusYearMap.get(y);
+          const label = i === 0 ? `the ${y} U.S. census` : `the ${y} census`;
+          return loc ? `${label} in ${loc}` : label;
+        });
+        const allButLast = yearPhrases.slice(0, -1).join("; ");
+        familyParts.push(`${given} appears in ${allButLast}; and ${yearPhrases[yearPhrases.length - 1]}.`);
+      } else {
+        familyParts.push(`${given} appears in U.S. census records from ${rest.join(", ")} and ${last}.`);
+      }
     }
   }
   if (familyParts.length) paragraphs.push(familyParts.join(" "));
