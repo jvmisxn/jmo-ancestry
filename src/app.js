@@ -2178,6 +2178,25 @@ function generatedLifeStory(person) {
         // Use semicolons to separate groups so inner commas/ands don't bleed across.
         familyParts.push(`${given} had ${totalStr} ${childIds.length === 1 ? "child" : "children"}: ${groupParts.join("; ")}.`);
         usedGrouped = true;
+      } else if (groups.length === 1) {
+        // Multiple spouses but all children attributed to one — name the spouse so
+        // the reader sees which union produced the family without opening each profile.
+        // "X had five children with Y: A, B, and C." avoids the redundant count that
+        // the grouped format ("five children: five with Y") produces in this case.
+        const [sid, cids] = groups[0];
+        const spouseName = cardDisplayName(personById(sid)?.name) || sid;
+        const n = cids.length;
+        const cntWord = numWord(n);
+        if (n > 4) {
+          const preview = formatNameList(namesForIds(cids.slice(0, 3)));
+          familyParts.push(`${given} had ${cntWord} children with ${spouseName}, including ${preview}.`);
+        } else {
+          const nameList = formatNameList(namesForIds(cids));
+          familyParts.push(n === 1
+            ? `${given} had one recorded child with ${spouseName}, ${nameList}.`
+            : `${given} had ${cntWord} children with ${spouseName}: ${nameList}.`);
+        }
+        usedGrouped = true;
       }
     }
     if (!usedGrouped) {
