@@ -2011,7 +2011,7 @@ function generatedLifeStory(person) {
           if (pdeathNum === null) return null;
           const ageAtLoss = pdeathNum - birthNum;
           if (ageAtLoss < 0 || ageAtLoss > 17) return null;
-          return { name: parent.name, year: pdeathNum, age: ageAtLoss };
+          return { name: cardDisplayName(parent.name), year: pdeathNum, age: ageAtLoss };
         })
         .filter(Boolean)
         .sort((a, b) => a.year - b.year);
@@ -2043,7 +2043,7 @@ function generatedLifeStory(person) {
     paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${ageStr}${placeStr}.`);
   } else if (spouseIds.length > 1) {
     const spouseEntries = spouseIds.map((sid) => {
-      const name = personById(sid)?.name;
+      const name = cardDisplayName(personById(sid)?.name);
       if (!name) return null;
       const m = resolveMarriageYear(person, sid);
       const marriageAge = m && birthNum !== null ? m.year - birthNum : null;
@@ -2152,7 +2152,7 @@ function generatedLifeStory(person) {
       if (groups.length >= 2 || (groups.length === 1 && unattr.length > 0)) {
         const totalStr = numWord(childIds.length);
         const groupParts = groups.map(([sid, cids]) => {
-          const spouseName = personById(sid)?.name || sid;
+          const spouseName = cardDisplayName(personById(sid)?.name) || sid;
           const n = cids.length;
           if (n > 4) {
             const preview = formatNameList(namesForIds(cids.slice(0, 3)));
