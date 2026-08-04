@@ -795,14 +795,10 @@ function renderDetails() {
         if (otherParentId) parts.push(`with ${givenName(personById(otherParentId)?.name)}`);
       }
       const childBirthYear = yearLabel(child?.birth?.date);
-      const childBirthNum = numericYear(child?.birth?.date);
       if (childBirthYear) parts.push(`b. ${childBirthYear}`);
       const childDeathYear = yearLabel(child?.death?.date);
-      const childDeathNum = numericYear(child?.death?.date);
       if (childDeathYear) {
-        const childAgeAtDeath = childBirthNum !== null && childDeathNum !== null ? childDeathNum - childBirthNum : null;
-        const ageTag = childAgeAtDeath === 0 ? " (infant)" : childAgeAtDeath !== null && childAgeAtDeath > 0 && childAgeAtDeath <= 110 ? ` (aged ${childAgeAtDeath})` : "";
-        parts.push(`d. ${childDeathYear}${ageTag}`);
+        parts.push(`d. ${childDeathYear}${relationAgeTag(child)}`);
       }
       // When the note already carries d. YEAR, personListMeta's "Died in X"
       // would repeat the death signal. Use only the birth place instead.
@@ -857,10 +853,7 @@ function renderDetails() {
       }
       const yearNote = sibYearLabel ? `b. ${sibYearLabel}` : "";
       const sibDeathYearLabel = yearLabel(sib?.death?.date);
-      const sibDeathNum = numericYear(sib?.death?.date);
-      const sibAgeAtDeath = sibYear !== null && sibDeathNum !== null ? sibDeathNum - sibYear : null;
-      const sibAgeTag = sibAgeAtDeath === 0 ? " (infant)" : sibAgeAtDeath !== null && sibAgeAtDeath > 0 && sibAgeAtDeath <= 110 ? ` (aged ${sibAgeAtDeath})` : "";
-      const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}${sibAgeTag}` : "";
+      const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}${relationAgeTag(sib)}` : "";
       // When the note already carries d. YEAR, personListMeta's "Died in X"
       // would repeat the death signal. Use only the birth place instead.
       const placeMeta = deathNote
@@ -5408,6 +5401,20 @@ function ageAtDeath(person) {
   }
   const years = death.year - birth.year;
   return years >= 0 ? { years, approx: true } : null;
+}
+
+// Compact age-at-death tag for the relationship list ("(infant)", "(aged N)").
+// Uses ageAtDeath so month/day precision is respected when available.
+// Year-only data where the computed age is 0 or 1 is treated as infant because
+// a death that straddles a year boundary (born Dec, died Jan) yields age 1 by
+// simple subtraction but the person was still a newborn.
+function relationAgeTag(person) {
+  if (!person?.death?.date) return "";
+  const age = ageAtDeath(person);
+  if (age === null) return "";
+  if (age.years === 0 || (age.years === 1 && age.approx)) return " (infant)";
+  if (age.years > 0 && age.years <= 110) return ` (aged ${age.years})`;
+  return "";
 }
 
 // Current age for people with no recorded death — shows "Age X" (exact) or
