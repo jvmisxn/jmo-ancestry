@@ -5327,14 +5327,16 @@ function formatEventProse(event) {
   return [date, place].filter(Boolean).join(", ");
 }
 
-// Strip the trailing ", USA" / ", United States" / ", United States of America"
-// from a place string used in narrative prose. Only used by formatEventProse;
-// the facts panel and timeline keep the original form for precision.
+// Strip trailing country-level suffixes from a place string used in narrative
+// prose — ", USA", ", United Kingdom", etc. are redundant when the city/county
+// already names the region. Only used by formatEventProse; the facts panel and
+// timeline keep the original form for precision.
 function trimUsaCountry(place) {
   return String(place)
     .replace(/,\s*United States of America$/i, "")
     .replace(/,\s*United States$/i, "")
     .replace(/,\s*USA$/i, "")
+    .replace(/,\s*United Kingdom$/i, "")
     .trim();
 }
 
