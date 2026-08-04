@@ -2103,6 +2103,22 @@ function generatedLifeStory(person) {
             ? `${given} married ${a.name} (${aYear}) and, widowed in ${firstSpouseDeath}, later married ${b.name}.`
             : `${given} was married to ${a.name} (${aYear}) and ${b.name}.`,
         );
+      } else if (
+        spouseEntries.length === 2
+        && !spouseEntries[0].m && spouseEntries[1].m
+      ) {
+        // Second listed spouse has a resolvable year but the first does not.
+        // When the first spouse's death is known and precedes the second
+        // marriage, we can name the widowhood even without a first-marriage year.
+        const [a, b] = spouseEntries;
+        const bYear = `${b.m.estimated ? "~" : ""}${b.m.year}${b.ageNote}`;
+        const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
+        const isWidowed = firstSpouseDeath !== null && firstSpouseDeath <= b.m.year;
+        paragraphs.push(
+          isWidowed
+            ? `${given} first married ${a.name} and, widowed in ${firstSpouseDeath}, later married ${b.name} (${bYear}).`
+            : `${given} was married to ${a.name} and ${b.name} (${bYear}).`,
+        );
       } else if (spouseEntries.length >= 3) {
         // Three or more spouses: sort chronologically by resolved year so the
         // sequence reads naturally, then use "married N times: first to A, then
