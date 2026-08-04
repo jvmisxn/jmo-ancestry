@@ -1933,19 +1933,30 @@ function generatedLifeStory(person) {
   // Nickname extraction uses the same cleaned name so parenthesised ship names
   // (e.g. "Elizabeth" in "(Arrival 1635 on \"Elizabeth\")") are not mistaken for
   // personal nicknames. Also match single-quoted nicknames ('Narcie').
+  // Collect ALL quoted double-quote nicknames (some people carry two, like
+  // Hettie Ann "Hattie" "Hester" Adams), then fall back to a single-quoted
+  // nickname, so every known nickname surfaces in the "was known as" sentence.
   const nameForNick = cleanName;
-  const nicknameMatch = nameForNick.match(/"([^"]+)"/) || nameForNick.match(/\s'([^']+)'/);
-  let nicknameFull = nicknameMatch ? (nicknameMatch[1]) : null;
+  const doubleQuoteNicks = [...nameForNick.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  const singleQuoteNick = doubleQuoteNicks.length === 0
+    ? (nameForNick.match(/\s'([^']+)'/) || [])[1] || null
+    : null;
+  const primaryNicks = doubleQuoteNicks.length
+    ? doubleQuoteNicks
+    : singleQuoteNick
+      ? [singleQuoteNick]
+      : [];
   // When the primary name has no quoted nickname, check aliases — some people
   // store the familiar form only there (e.g. Danny Graves aliases include
-  // 'Danny "Gomer" Graves'). Stop at the first alias that carries one.
-  if (!nicknameFull) {
-    for (const alias of (person.aliases || [])) {
-      const aliasNick = alias.match(/"([^"]+)"/);
-      if (aliasNick) { nicknameFull = aliasNick[1]; break; }
-    }
-  }
-  const nickname = nicknameFull && nicknameFull !== given ? nicknameFull : null;
+  // 'Danny "Gomer" Graves').
+  const aliasNicks = primaryNicks.length === 0
+    ? (person.aliases || []).flatMap((alias) => {
+        const m = alias.match(/"([^"]+)"/);
+        return m ? [m[1]] : [];
+      })
+    : [];
+  const allNicks = [...new Set([...primaryNicks, ...aliasNicks])].filter((n) => n !== given);
+  const nickname = allNicks.length > 0 ? allNicks : null;
   const birthNum = numericYear(person.birth?.date);
   const deathNum = numericYear(person.death?.date);
 
@@ -1980,7 +1991,7 @@ function generatedLifeStory(person) {
   }
   // When parents exist but birth info is absent, the parentage sentence below opens
   // the paragraph with the full name — no separate placeholder needed.
-  if (nickname) originParts.push(`${given} was known as ${nickname}.`);
+  if (nickname) originParts.push(`${given} was known as ${formatNameList(nickname)}.`);
   // Surface ship-arrival or general immigration facts from name annotations.
   // Annotations like "(Arrival 1635 on \"Elizabeth\")" and "(Immigrant)" carry
   // genealogically significant events that should appear in the narrative.
