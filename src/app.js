@@ -2295,6 +2295,28 @@ function generatedLifeStory(person) {
   }
   if (militaryParts.length) paragraphs.push(militaryParts.join(" "));
 
+  // Career paragraph: surface family-provided occupation facts stored in
+  // user-provided Discord note source labels. These notes follow the pattern
+  // "User-provided Discord note, YYYY-MM-DD: [Given] worked for …" and carry
+  // biographical details (employer, role, awards) not captured in structured
+  // fields. Only notes whose content opens with this person's given name
+  // followed by a work/employment verb are included, so lineage or context
+  // notes ("Matthew had Jason and Jon with Lavonne") don't bleed in.
+  const careerParts = [];
+  if (given && given !== "They") {
+    const escapedGiven = given.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const careerPat = new RegExp(`^${escapedGiven}\\s+(worked|was a\\s|served as|employed|had a career)`, "i");
+    for (const src of profileSources(person)) {
+      const lbl = src.label || src.title || "";
+      const m = lbl.match(/^user-provided\s+[^,]+,\s*\d{4}-\d{2}-\d{2}\s*:\s*(.+)/i);
+      if (!m) continue;
+      const content = m[1].trim();
+      if (!careerPat.test(content)) continue;
+      careerParts.push(content.endsWith(".") ? content : `${content}.`);
+    }
+  }
+  if (careerParts.length) paragraphs.push(careerParts.join(" "));
+
   // Para 4: death — include who the person left behind so the story closes
   // with the same family context the life timeline shows for the death event.
   if (death) {
