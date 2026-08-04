@@ -5154,8 +5154,8 @@ function ordinal(value) {
 function personListMeta(person) {
   if (!person) return "";
   const details = [
-    person.birth?.place,
-    person.death?.place ? `Died in ${person.death.place}` : "",
+    person.birth?.place ? trimPlaceAnnotations(person.birth.place) : "",
+    person.death?.place ? `Died in ${trimPlaceAnnotations(person.death.place)}` : "",
     person.aliases?.length ? `AKA ${person.aliases[0]}` : "",
   ].filter(Boolean);
   return details.slice(0, 2).join(" • ");
