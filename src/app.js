@@ -5454,7 +5454,10 @@ function formatMetaDate(value) {
 
 function namesForIds(ids = []) {
   return [...ids]
-    .map((id) => personById(id)?.name)
+    .map((id) => {
+      const name = personById(id)?.name;
+      return name ? cardDisplayName(name) : null;
+    })
     .filter(Boolean);
 }
 
