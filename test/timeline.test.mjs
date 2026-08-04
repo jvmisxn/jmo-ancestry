@@ -85,18 +85,18 @@ check("event order (year + label)", events.map((e) => `${e.year} ${e.label}`), [
   "1975 Find a Grave memorial",
 ]);
 check("marriage event links to spouse", events.find((e) => e.marriage)?.personId, "spouse");
-check("marriage event carries age and estimated flag", events.find((e) => e.marriage)?.detail, "around age 24 · year estimated");
+check("marriage event carries age and estimated flag", events.find((e) => e.marriage)?.detail, "about age 24 · year estimated");
 check("posthumous record carries no age", events.find((e) => e.label === "Find a Grave memorial")?.detail, "Find a Grave");
 check("undated child and undated source excluded", events.some((e) => /No Dates|portrait/.test(e.label)), false);
 check("parent death before person's birth excluded", events.some((e) => e.label === "Father Example died"), false);
-check("parent-loss event carries role + age", events.find((e) => e.label === "Mother Example died")?.detail, "parent · around age 32");
+check("parent-loss event carries role + age", events.find((e) => e.label === "Mother Example died")?.detail, "parent · at age 32");
 check("spouse-loss event links to the spouse", events.find((e) => e.label === "Spouse Example died")?.personId, "spouse");
-check("child-loss event carries child age + parent age", events.find((e) => e.label === "Ada Junior died")?.detail, "child · aged 27 · around age 52");
+check("child-loss event carries child age + parent age", events.find((e) => e.label === "Ada Junior died")?.detail, "child · aged 27 · at age 52");
 check("child death after person's own death excluded", events.some((e) => e.label === "Ben Example died"), false);
 check("record keeps its link", events.find((e) => e.record)?.url, "https://example.com/census-1900");
 check("in-lifetime record carries person's age", events.find((e) => e.label === "1900 United States Census")?.detail, "around age 20");
 check("record age joins existing meta", events.find((e) => e.label === "Obituary")?.detail, "around age 70 · The Gazette");
-check("child event carries parent age + place", events.find((e) => e.label === "Ben Example born")?.detail, "around age 28 · Springfield");
+check("child event carries parent age + place", events.find((e) => e.label === "Ben Example born")?.detail, "aged 28 · Springfield");
 check("death detail includes age", /aged 70/.test(events.find((e) => e.label === "Died")?.detail || ""), true);
 check("obituary sorts after death in same year", events.findIndex((e) => e.label === "Obituary") > events.findIndex((e) => e.label === "Died"), true);
 
