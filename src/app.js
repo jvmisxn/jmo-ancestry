@@ -831,9 +831,14 @@ function renderDetails() {
       const spouseAgeAtDeath = spouseBirthNum !== null && spouseDeathNum !== null ? spouseDeathNum - spouseBirthNum : null;
       const spouseAgeTag = spouseAgeAtDeath === 0 ? " (infant)" : spouseAgeAtDeath !== null && spouseAgeAtDeath > 0 && spouseAgeAtDeath <= 110 ? ` (aged ${spouseAgeAtDeath})` : "";
       const deathNote = spouseDeathYearLabel ? `d. ${spouseDeathYearLabel}${spouseAgeTag}` : "";
-      const baseMeta = personListMeta(spouse);
+      // When the note already carries d. YEAR, personListMeta's "Died in X"
+      // would repeat the death signal. Use only the birth place instead —
+      // mirrors the same guard applied to sibling and child notes.
+      const placeMeta = deathNote
+        ? trimPlaceAnnotations(spouse?.birth?.place || "")
+        : personListMeta(spouse);
       const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
-      spouseNoteById.set(spouseId, [yearNote, deathNote, baseMeta, childNote].filter(Boolean).join(" · "));
+      spouseNoteById.set(spouseId, [yearNote, deathNote, placeMeta, childNote].filter(Boolean).join(" · "));
     }
   }
 
