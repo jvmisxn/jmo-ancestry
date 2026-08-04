@@ -1959,9 +1959,15 @@ function generatedLifeStory(person) {
     && /^\d{4}$/.test(person.birth?.date || "")
     && Boolean((person.birth?.place || "").trim());
   const birthProse = birthPlaceOnly ? `in ${trimPlaceAnnotations((person.birth?.place || "").trim())}` : birth;
-  originParts.push(birthProse && !birthYearOnly
-    ? `${intro} was born ${birthProse}.`
-    : `${intro} is recorded in the family tree.`);
+  const hasBirthInfo = Boolean(birthProse) && !birthYearOnly;
+  if (hasBirthInfo) {
+    originParts.push(`${intro} was born ${birthProse}.`);
+  } else if (!parents.length) {
+    // No birth info and no parents: keep the generic placeholder as the only intro.
+    originParts.push(`${intro} is recorded in the family tree.`);
+  }
+  // When parents exist but birth info is absent, the parentage sentence below opens
+  // the paragraph with the full name — no separate placeholder needed.
   if (nickname) originParts.push(`${given} was known as ${nickname}.`);
   // Surface ship-arrival or general immigration facts from name annotations.
   // Annotations like "(Arrival 1635 on \"Elizabeth\")" and "(Immigrant)" carry
@@ -2013,7 +2019,8 @@ function generatedLifeStory(person) {
         siblingStr = `, one of ${totalChildren} children`;
       }
     }
-    originParts.push(`${given} was the child of ${formatNameList(parents)}${siblingStr}.`);
+    const parentageSubject = hasBirthInfo ? given : intro;
+    originParts.push(`${parentageSubject} was the child of ${formatNameList(parents)}${siblingStr}.`);
     // If a parent died while this person was still a child (under 18), name
     // the loss in the origin paragraph — early parental death often shaped the
     // rest of a person's life through guardianship, early work, or remarriage.
