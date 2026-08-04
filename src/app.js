@@ -1988,7 +1988,7 @@ function generatedLifeStory(person) {
         if (childId !== person.id) siblingIds.add(childId);
       }
     }
-    const siblings = [...siblingIds];
+    const siblings = sortByBirthYear([...siblingIds]);
     const totalChildren = siblings.length + 1;
     let siblingStr;
     if (siblings.length === 0) {
