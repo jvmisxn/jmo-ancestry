@@ -838,7 +838,9 @@ function renderDetails() {
         ? trimPlaceAnnotations(spouse?.birth?.place || "")
         : personListMeta(spouse);
       const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
-      spouseNoteById.set(spouseId, [yearNote, deathNote, placeMeta, childNote].filter(Boolean).join(" · "));
+      const marriageResolved = resolveMarriageYear(person, spouseId);
+      const marriageNote = marriageResolved ? `m. ${marriageResolved.estimated ? "~" : ""}${marriageResolved.year}` : "";
+      spouseNoteById.set(spouseId, [marriageNote, yearNote, deathNote, placeMeta, childNote].filter(Boolean).join(" · "));
     }
   }
 
