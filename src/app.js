@@ -2258,7 +2258,16 @@ function generatedLifeStory(person) {
     }
   }
 
-  if (familyParts.length) paragraphs.push(familyParts.join(" "));
+  // Split children and census into separate paragraphs so the summary-supplement
+  // filter can suppress each independently. Without this, when a real summary
+  // mentions children (blocking the whole family paragraph), census evidence
+  // hidden in the same paragraph is silently dropped alongside it.
+  if (familyParts.length) {
+    const childParts = familyParts.filter((pt) => !/\bappears in\b.*\bcensus\b/i.test(pt));
+    const censusParts = familyParts.filter((pt) => /\bappears in\b.*\bcensus\b/i.test(pt));
+    if (childParts.length) paragraphs.push(childParts.join(" "));
+    if (censusParts.length) paragraphs.push(censusParts.join(" "));
+  }
 
   // Military facts get their own paragraph so they survive the summary-supplement
   // filter even when the summary already covers children or census records. Draft
