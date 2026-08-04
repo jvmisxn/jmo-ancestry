@@ -2191,6 +2191,11 @@ function generatedLifeStory(person) {
   const censusSrcs = profileSources(person)
     .filter((src) => /census/i.test(src.label || src.title || ""));
   const censusYearMap = new Map();
+  // Maps a census year to the household head's name when the person appears as
+  // a member of someone else's household rather than as head of their own — adds
+  // "in the X household" to the census sentence so the reader sees who they were
+  // living with at that point in their life.
+  const censusHouseholdMap = new Map();
   for (const src of censusSrcs) {
     let yr = sourceEventYear(src, birthNum, deathNum);
     // sourceEventYear returns null when birthNum is unknown because it can't
@@ -2204,12 +2209,25 @@ function generatedLifeStory(person) {
       if (m) yr = Number(m[1]);
     }
     if (yr === null) continue;
-    const loc = extractCensusLocation(src.label || src.title || "");
+    const lbl = String(src.label || src.title || "");
+    const loc = extractCensusLocation(lbl);
     if (!censusYearMap.has(yr)) {
       censusYearMap.set(yr, loc);
     } else if (loc && !censusYearMap.get(yr)) {
       // Prefer a location-bearing source over a bare "Ancestry source: … Census" entry
       censusYearMap.set(yr, loc);
+    }
+    // Labels shaped like "…, Toy Graves household" identify the head of household.
+    // If the household name's words are not all present in this person's name, the
+    // person appears as a household member rather than the head — worth surfacing.
+    if (!censusHouseholdMap.has(yr)) {
+      const hm = lbl.match(/,\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+household\b/);
+      if (hm) {
+        const householdName = hm[1];
+        const nameLower = String(person.name || "").toLowerCase();
+        const isOwnHousehold = householdName.split(/\s+/).every((w) => nameLower.includes(w.toLowerCase()));
+        if (!isOwnHousehold) censusHouseholdMap.set(yr, householdName);
+      }
     }
   }
   const censusYears = [...censusYearMap.keys()].sort((a, b) => a - b);
@@ -2221,8 +2239,10 @@ function generatedLifeStory(person) {
   };
   if (censusYears.length === 1) {
     const loc = censusYearMap.get(censusYears[0]);
+    const household = censusHouseholdMap.get(censusYears[0]);
     const locStr = loc ? ` in ${loc}` : "";
-    familyParts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}${censusAgeStr(censusYears[0])}.`);
+    const householdStr = household ? `, in the ${household} household` : "";
+    familyParts.push(`${given} appears in the ${censusYears[0]} U.S. census${locStr}${censusAgeStr(censusYears[0])}${householdStr}.`);
   } else if (censusYears.length >= 2) {
     const last = censusYears[censusYears.length - 1];
     const rest = censusYears.slice(0, -1);
