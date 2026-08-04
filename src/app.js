@@ -871,6 +871,8 @@ function renderDetails() {
   // generational context at a glance without opening the parent's profile.
   // Falls back to the parent's birth year when the age cannot be computed,
   // keeping parents consistent with siblings and spouses (which always show b. YYYY).
+  // Death year and age are appended (matching sibling/spouse note format) so the
+  // reader sees how long each parent lived without opening a separate profile.
   let parentNoteById = null;
   if (relations.parents.length) {
     const map = new Map();
@@ -878,16 +880,21 @@ function renderDetails() {
       const parent = personById(parentId);
       const py = numericYear(parent?.birth?.date);
       const parentYearLabel = yearLabel(parent?.birth?.date);
+      const parts = [];
       if (py !== null && personBirthYear !== null) {
         const parentAge = personBirthYear - py;
         if (parentAge >= 12 && parentAge <= 80) {
-          map.set(parentId, `Age ${parentAge} when ${givenName(person.name)} was born`);
+          parts.push(`Age ${parentAge} when ${givenName(person.name)} was born`);
         } else if (parentYearLabel) {
-          map.set(parentId, `b. ${parentYearLabel}`);
+          parts.push(`b. ${parentYearLabel}`);
         }
       } else if (parentYearLabel) {
-        map.set(parentId, `b. ${parentYearLabel}`);
+        parts.push(`b. ${parentYearLabel}`);
       }
+      const parentDeathYearLabel = yearLabel(parent?.death?.date);
+      if (parentDeathYearLabel) parts.push(`d. ${parentDeathYearLabel}${relationAgeTag(parent)}`);
+      const note = parts.filter(Boolean).join(" · ");
+      if (note) map.set(parentId, note);
     }
     if (map.size) parentNoteById = map;
   }
