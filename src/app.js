@@ -1967,9 +1967,16 @@ function generatedLifeStory(person) {
       const orderedSibs = sortByBirthYear(siblings);
       const firstGivens = orderedSibs.slice(0, 2).map((id) => givenName(personById(id)?.name)).filter(Boolean);
       const rest = siblings.length - firstGivens.length;
-      siblingStr = firstGivens.length
-        ? `, one of ${totalChildren} children alongside ${formatNameList(firstGivens)} and ${rest} other${rest === 1 ? "" : "s"}`
-        : `, one of ${totalChildren} children`;
+      if (firstGivens.length >= 2) {
+        // "Alice, Bob, and 3 others" — serial comma avoids the double-"and" that
+        // results from "Alice and Bob and 3 others".
+        const othersStr = `${rest} other${rest === 1 ? "" : "s"}`;
+        siblingStr = `, one of ${totalChildren} children alongside ${firstGivens.join(", ")}, and ${othersStr}`;
+      } else if (firstGivens.length === 1) {
+        siblingStr = `, one of ${totalChildren} children alongside ${firstGivens[0]} and ${rest} other${rest === 1 ? "" : "s"}`;
+      } else {
+        siblingStr = `, one of ${totalChildren} children`;
+      }
     }
     originParts.push(`${given} was the child of ${formatNameList(parents)}${siblingStr}.`);
     // If a parent died while this person was still a child (under 18), name

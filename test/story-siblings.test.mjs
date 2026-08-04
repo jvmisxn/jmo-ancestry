@@ -118,7 +118,7 @@ check(
       { ...mom, children: ["alice", "bob", "carol", "dan", "eve"] },
     ],
   }),
-  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams, one of 5 children alongside Bob and Carol and 2 others.",
+  "Alice Adams (b. 1900) is recorded in the family tree. Alice was the child of John Adams and Mary Adams, one of 5 children alongside Bob, Carol, and 2 others.",
 );
 
 if (failures === 0) {
