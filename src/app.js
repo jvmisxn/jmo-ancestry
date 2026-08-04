@@ -2259,15 +2259,25 @@ function generatedLifeStory(person) {
     if (locations.length === 1) {
       const yearsWithAges = [...rest.map((y) => `${y}${censusAgeStr(y)}`), `${last}${censusAgeStr(last)}`];
       const [allButLast2, lastItem] = [yearsWithAges.slice(0, -1), yearsWithAges[yearsWithAges.length - 1]];
-      familyParts.push(`${given} appears in U.S. census records from ${allButLast2.join(", ")} and ${lastItem} in ${locations[0]}.`);
+      // Surface the household head when any census record names one — use the most
+      // recent year's entry since it usually reflects where the person was living
+      // as an adult. The single-census path already does this; the multi-year
+      // paths were previously dropping it.
+      const householdYear = [...censusYears].reverse().find((y) => censusHouseholdMap.get(y));
+      const multiHouseholdStr = householdYear ? `, in the ${censusHouseholdMap.get(householdYear)} household` : "";
+      familyParts.push(`${given} appears in U.S. census records from ${allButLast2.join(", ")} and ${lastItem} in ${locations[0]}${multiHouseholdStr}.`);
     } else if (censusYears.length === 2) {
       // Two census years with different (or partially-missing) locations — name each pair so
       // geographic movement is visible ("in Allen County, Kentucky" → "in Warren County, Kentucky").
       const loc0 = censusYearMap.get(censusYears[0]);
       const loc1 = censusYearMap.get(censusYears[1]);
+      const h0 = censusHouseholdMap.get(censusYears[0]);
+      const h1 = censusHouseholdMap.get(censusYears[1]);
       const str0 = loc0 ? `the ${censusYears[0]} U.S. census in ${loc0}` : `the ${censusYears[0]} U.S. census`;
       const str1 = loc1 ? `the ${censusYears[1]} census in ${loc1}` : `the ${censusYears[1]} census`;
-      familyParts.push(`${given} appears in ${str0}${censusAgeStr(censusYears[0])} and ${str1}${censusAgeStr(censusYears[1])}.`);
+      const h0Str = h0 ? `, in the ${h0} household` : "";
+      const h1Str = h1 ? `, in the ${h1} household` : "";
+      familyParts.push(`${given} appears in ${str0}${censusAgeStr(censusYears[0])}${h0Str} and ${str1}${censusAgeStr(censusYears[1])}${h1Str}.`);
     } else {
       // 3+ census years with multiple distinct locations — build per-year phrases
       // matching the 2-census format so geographic movement is visible in the story.
@@ -2275,8 +2285,10 @@ function generatedLifeStory(person) {
       if (hasAnyLoc) {
         const yearPhrases = censusYears.map((y, i) => {
           const loc = censusYearMap.get(y);
+          const household = censusHouseholdMap.get(y);
+          const householdStr = household ? `, in the ${household} household` : "";
           const label = i === 0 ? `the ${y} U.S. census` : `the ${y} census`;
-          return loc ? `${label} in ${loc}${censusAgeStr(y)}` : `${label}${censusAgeStr(y)}`;
+          return loc ? `${label} in ${loc}${censusAgeStr(y)}${householdStr}` : `${label}${censusAgeStr(y)}${householdStr}`;
         });
         const allButLast = yearPhrases.slice(0, -1).join("; ");
         familyParts.push(`${given} appears in ${allButLast}; and ${yearPhrases[yearPhrases.length - 1]}.`);
