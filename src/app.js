@@ -2639,6 +2639,13 @@ const SOURCE_REPOSITORIES = [
   ["sortedbyname.com", "SortedByName"],
   // USGenWeb cemetery transcriptions (Prevatt, Crosby Lake, etc.).
   ["usgenwebsites.org", "USGenWeb"],
+  ["usgennet.org", "USGenNet"],
+  // Local funeral homes and newspapers used as obituary sources.
+  ["goadfh.com", "Goad Funeral Home"],
+  ["bgdailynews.com", "Bowling Green Daily News"],
+  ["bakercountypress.com", "Baker County Press"],
+  // Compiled family group sheets from the FGS genealogy project.
+  ["fgs-project.com", "FGS Project"],
 ];
 
 function sourceRepositoryName(url) {
@@ -2907,10 +2914,14 @@ function cleanSourceLabel(label, repository) {
   const escaped = repository.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const base = repository.replace(/\.[a-z]{2,}$/i, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = base && base !== escaped ? `(?:${escaped}|${base})` : escaped;
-  const stripped = label.replace(
+  // Strip prefix: "Ancestry source: ..." → "..."
+  let stripped = label.replace(
     new RegExp(`^${pattern}\\s*(source|record|entry)?\\s*[:\\-–]\\s*`, "i"),
     "",
   ).trim();
+  // Strip suffix: "Reathel Graves obituary, Goad Funeral Home" → "Reathel Graves obituary"
+  // when the badge already names the repository.
+  stripped = stripped.replace(new RegExp(`,\\s*${pattern}\\s*$`, "i"), "").trim();
   return stripped || label;
 }
 
