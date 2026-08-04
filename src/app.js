@@ -1143,7 +1143,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       detail: [
         age !== null ? `around age ${age}` : "",
         otherParent ? `with ${givenName(otherParent.name)}` : "",
-        child.birth?.place || "",
+        trimPlaceAnnotations(child.birth?.place || ""),
       ].filter(Boolean).join(" · "),
     });
   }
