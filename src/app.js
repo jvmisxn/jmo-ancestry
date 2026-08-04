@@ -2426,7 +2426,7 @@ function generatedLifeStory(person) {
     // Fall back to the structured occupation field when no note-based career facts
     // were found — generates a minimal sentence so the detail isn't silently lost.
     if (!careerParts.length && person.occupation) {
-      careerParts.push(`${given} worked as ${person.occupation}.`);
+      careerParts.push(`${given} worked as ${aOrAn(person.occupation)} ${person.occupation}.`);
     }
   }
   if (careerParts.length) paragraphs.push(careerParts.join(" "));
@@ -5526,6 +5526,10 @@ function namesForIds(ids = []) {
       return name ? cardDisplayName(name) : null;
     })
     .filter(Boolean);
+}
+
+function aOrAn(word) {
+  return /^[aeiou]/i.test(String(word || "").trim()) ? "an" : "a";
 }
 
 function formatNameList(names) {
