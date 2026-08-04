@@ -900,6 +900,13 @@ function renderDetails() {
       }
       const parentDeathYearLabel = yearLabel(parent?.death?.date);
       if (parentDeathYearLabel) parts.push(`d. ${parentDeathYearLabel}${relationAgeTag(parent)}`);
+      // When the note already carries d. YEAR, personListMeta's "Died in X"
+      // would repeat the death signal. Use only the birth place instead —
+      // mirrors the same guard applied to sibling, spouse, and child notes.
+      const parentPlaceMeta = parentDeathYearLabel
+        ? trimPlaceAnnotations(parent?.birth?.place || "")
+        : personListMeta(parent);
+      if (parentPlaceMeta) parts.push(parentPlaceMeta);
       const note = parts.filter(Boolean).join(" · ");
       if (note) map.set(parentId, note);
     }
