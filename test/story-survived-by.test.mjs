@@ -120,7 +120,22 @@ check(
   "Alice died in Ohio, about age 70, survived by 4 children (including Bob and Carol).",
 );
 
-// 6. One child who predeceased — no survived-by
+// 6. Two surviving children AND a surviving spouse — groups separated by ", and "
+//    to avoid the ambiguous run-on "children Bob and Carol and spouse Eve".
+check(
+  "two children and spouse — comma separates groups",
+  deathParaFor({
+    people: [
+      { ...parent, children: ["bob", "carol"], spouses: ["eve"] },
+      { id: "bob", name: "Bob Smith", birth: { date: "1925" }, parents: ["alice"], spouses: [], children: [] },
+      { id: "carol", name: "Carol Smith", birth: { date: "1927" }, parents: ["alice"], spouses: [], children: [] },
+      { id: "eve", name: "Eve Jones", birth: { date: "1905" }, spouses: ["alice"], parents: [], children: [] },
+    ],
+  }),
+  "Alice died in Ohio, about age 70, survived by children Bob and Carol, and spouse Eve.",
+);
+
+// 7. One child who predeceased — no survived-by
 check(
   "predeceased child — no survived-by",
   deathParaFor({

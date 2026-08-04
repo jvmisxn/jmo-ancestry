@@ -2526,7 +2526,11 @@ function generatedLifeStory(person) {
     }
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
-    const survivedStr = survivedBy.length ? `, survived by ${survivedBy.join(" and ")}` : "";
+    // Use ", and " between groups (children / spouse) so "children Bob and Carol, and spouse Bertie"
+    // reads as two distinct groups rather than "Bob and Carol and spouse Bertie" (one run-on list).
+    const survivedStr = survivedBy.length
+      ? `, survived by ${survivedBy.length > 1 ? survivedBy.join(", and ") : survivedBy[0]}`
+      : "";
     const predeceasedParts = [];
     const predeceasedSpouseNames = predeceasedSpouses.map((sid) => givenName(personById(sid)?.name)).filter(Boolean);
     if (predeceasedSpouseNames.length) predeceasedParts.push(formatNameList(predeceasedSpouseNames));
