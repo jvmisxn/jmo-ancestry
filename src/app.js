@@ -1573,7 +1573,14 @@ function renderLifeStory(person) {
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
         if (hasDeath && /\bdied\b/.test(p)) return false;
         if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
-        if (hasCensus && /\bcensus\b/.test(p)) return false;
+        if (hasCensus && /\bcensus\b/.test(p)) {
+          // Broad suppression would hide census years the summary never covers.
+          // Only suppress when every year in the generated census paragraph appears
+          // in the summary — if even one census year is absent from the summary,
+          // keep the paragraph so the reader sees that uncovered appearance.
+          const parasYears = [...p.matchAll(/\b(1[6-9]\d{2}|20[0-4]\d)\b/g)].map(m => m[1]);
+          if (!parasYears.length || parasYears.every(yr => summaryLower.includes(yr))) return false;
+        }
         // When the summary uses narrative prose ("by 1940", "by 1950") rather than
         // explicitly saying "census", the year signals that event is already told —
         // suppress the generated census sentence to avoid restating it differently.
