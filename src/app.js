@@ -795,7 +795,11 @@ function renderDetails() {
         const ageTag = childAgeAtDeath === 0 ? " (infant)" : childAgeAtDeath !== null && childAgeAtDeath > 0 && childAgeAtDeath <= 110 ? ` (aged ${childAgeAtDeath})` : "";
         parts.push(`d. ${childDeathYear}${ageTag}`);
       }
-      const placeMeta = personListMeta(child);
+      // When the note already carries d. YEAR, personListMeta's "Died in X"
+      // would repeat the death signal. Use only the birth place instead.
+      const placeMeta = childDeathYear
+        ? trimPlaceAnnotations(child?.birth?.place || "")
+        : personListMeta(child);
       if (placeMeta) parts.push(placeMeta);
       map.set(childId, parts.join(" · "));
     }
@@ -838,7 +842,6 @@ function renderDetails() {
       const sib = personById(sibId);
       const sibYear = numericYear(sib?.birth?.date);
       const sibYearLabel = yearLabel(sib?.birth?.date);
-      const placeMeta = personListMeta(sib);
       let orderLabel = "";
       if (personBirthYear !== null && sibYear !== null) {
         orderLabel = sibYear < personBirthYear ? `Older ${type}` : sibYear > personBirthYear ? `Younger ${type}` : "Same birth year";
@@ -849,6 +852,11 @@ function renderDetails() {
       const sibAgeAtDeath = sibYear !== null && sibDeathNum !== null ? sibDeathNum - sibYear : null;
       const sibAgeTag = sibAgeAtDeath === 0 ? " (infant)" : sibAgeAtDeath !== null && sibAgeAtDeath > 0 && sibAgeAtDeath <= 110 ? ` (aged ${sibAgeAtDeath})` : "";
       const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}${sibAgeTag}` : "";
+      // When the note already carries d. YEAR, personListMeta's "Died in X"
+      // would repeat the death signal. Use only the birth place instead.
+      const placeMeta = deathNote
+        ? trimPlaceAnnotations(sib?.birth?.place || "")
+        : personListMeta(sib);
       const note = [orderLabel, yearNote, deathNote, placeMeta].filter(Boolean).join(" · ");
       if (note) map.set(sibId, note);
     }
