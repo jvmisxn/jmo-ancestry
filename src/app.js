@@ -2183,7 +2183,17 @@ function generatedLifeStory(person) {
     .filter((src) => /census/i.test(src.label || src.title || ""));
   const censusYearMap = new Map();
   for (const src of censusSrcs) {
-    const yr = sourceEventYear(src, birthNum, deathNum);
+    let yr = sourceEventYear(src, birthNum, deathNum);
+    // sourceEventYear returns null when birthNum is unknown because it can't
+    // validate the extracted year against the person's life span. Census labels
+    // almost always embed the census year unambiguously (e.g. "1930 United States
+    // Federal Census"), so fall back to a direct label scan for this specific case
+    // so people with no recorded birth year still get census facts in their story.
+    if (yr === null && birthNum === null) {
+      const lbl = String(src.label || src.title || "");
+      const m = lbl.match(/\b(1[6-9]\d{2}|20[0-4]\d)\b/);
+      if (m) yr = Number(m[1]);
+    }
     if (yr === null) continue;
     const loc = extractCensusLocation(src.label || src.title || "");
     if (!censusYearMap.has(yr)) {
