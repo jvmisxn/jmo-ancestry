@@ -1958,7 +1958,8 @@ function generatedLifeStory(person) {
   const birthPlaceOnly = !birthYearOnly
     && /^\d{4}$/.test(person.birth?.date || "")
     && Boolean((person.birth?.place || "").trim());
-  const birthProse = birthPlaceOnly ? `in ${trimPlaceAnnotations((person.birth?.place || "").trim())}` : birth;
+  const cleanedBirthPlace = birthPlaceOnly ? trimPlaceAnnotations((person.birth?.place || "").trim()) : "";
+  const birthProse = birthPlaceOnly ? (cleanedBirthPlace ? `in ${cleanedBirthPlace}` : "") : birth;
   const hasBirthInfo = Boolean(birthProse) && !birthYearOnly;
   if (hasBirthInfo) {
     originParts.push(`${intro} was born ${birthProse}.`);
@@ -2528,8 +2529,9 @@ function generatedLifeStory(person) {
     // either, keep the year as the only temporal anchor in the sentence.
     const deathIsYearOnly = /^\d{4}$/.test(person.death?.date || "");
     const deathHasPlace = !!(person.death?.place || "").trim();
-    const deathProse = deathIsYearOnly && deathHasPlace
-      ? `in ${trimPlaceAnnotations((person.death.place || "").trim())}`
+    const cleanedDeathPlace = deathIsYearOnly && deathHasPlace ? trimPlaceAnnotations((person.death.place || "").trim()) : "";
+    const deathProse = deathIsYearOnly && cleanedDeathPlace
+      ? `in ${cleanedDeathPlace}`
       : deathIsYearOnly && !ageProse
       ? death
       : deathIsYearOnly
@@ -5342,9 +5344,10 @@ function ordinal(value) {
 
 function personListMeta(person) {
   if (!person) return "";
+  const deathPlace = person.death?.place ? trimPlaceAnnotations(person.death.place) : "";
   const details = [
     person.birth?.place ? trimPlaceAnnotations(person.birth.place) : "",
-    person.death?.place ? `Died in ${trimPlaceAnnotations(person.death.place)}` : "",
+    deathPlace ? `Died in ${deathPlace}` : "",
     person.aliases?.length ? `AKA ${person.aliases[0]}` : "",
   ].filter(Boolean);
   return details.slice(0, 2).join(" • ");
@@ -5497,7 +5500,8 @@ function formatEvent(event) {
 function formatEventProse(event) {
   if (!event) return "";
   const date = humanizeDate(event.date);
-  const place = event.place ? `in ${trimPlaceAnnotations(event.place)}` : "";
+  const trimmedPlace = event.place ? trimPlaceAnnotations(event.place) : "";
+  const place = trimmedPlace ? `in ${trimmedPlace}` : "";
   return [date, place].filter(Boolean).join(", ");
 }
 
@@ -5521,13 +5525,22 @@ function trimUsaCountry(place) {
 // narrative names the primary candidate only. The facts panel and timeline
 // keep the full, unmodified string for precision.
 function trimPlaceAnnotations(place) {
-  return trimUsaCountry(
+  const cleaned = trimUsaCountry(
     String(place)
       .replace(/\s*\([^)]*\)/g, "")   // strip researcher parentheticals
       .replace(/\s+or\s+\S.*$/, "")   // strip trailing " or [alternative]"
       .replace(/\s+/g, " ")
       .trim(),
   );
+  // Bare country-level placeholders like "USA" carry no location context in
+  // prose — drop them so the narrative omits "born in USA" rather than printing
+  // an unhelpful sentence. "United Kingdom" follows the same rule; more
+  // specific forms like "Stepney, Middlesex, England" pass through unchanged.
+  if (/^(?:USA|United States(?:\s+of\s+America)?|UK)$/i.test(cleaned)) return "";
+  // Lone two-letter US state abbreviations read oddly in prose ("born in KY") —
+  // expand to the full state name so sentences read naturally.
+  if (/^[A-Z]{2}$/.test(cleaned) && US_STATE_NAMES[cleaned]) return US_STATE_NAMES[cleaned];
+  return cleaned;
 }
 
 function formatMetaDate(value) {
