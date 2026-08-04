@@ -1547,7 +1547,7 @@ function renderLifeStory(person) {
       const hasDeath = /\b(died|death|passed|buried|laid to rest)\b/.test(summaryLower);
       const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
       const hasCensus = /\bcensus\b/.test(summaryLower);
-      const hasMilitary = /\b(draft|served|military|army|navy|air force|marine)\b/.test(summaryLower);
+      const hasMilitary = /\b(draft|served|military|army|navy|air force|marine|veteran)\b/.test(summaryLower);
       const filtered = extras.filter((para) => {
         const p = para.toLowerCase();
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
