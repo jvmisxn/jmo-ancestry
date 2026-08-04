@@ -1543,7 +1543,11 @@ function renderLifeStory(person) {
     const extras = generatedLifeStory(person).slice(1);
     if (extras.length) {
       const summaryLower = summary.toLowerCase();
-      const hasMarriage = /\b(married|marriage|wed|spouse|husband|wife)\b/.test(summaryLower);
+      // "husband", "wife", and "spouse" are relational nouns that identify a spouse
+      // without describing the marriage event itself ("she and her husband raised their children",
+      // "Toy's wife Reathel"). Only suppress the generated marriage paragraph when the summary
+      // actually narrates the event — same pattern as the "son/daughter of" children fix.
+      const hasMarriage = /\b(married|marriage|wed|wedded)\b/.test(summaryLower);
       // "the death of [someone]" and "[name]'s death" are third-party deaths, not the
       // subject's own — don't let them suppress the generated death/burial supplement.
       const hasDeath = /\b(died|passed|buried|laid to rest)\b/.test(summaryLower) ||
