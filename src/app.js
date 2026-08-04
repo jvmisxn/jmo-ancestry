@@ -1547,12 +1547,14 @@ function renderLifeStory(person) {
       const hasDeath = /\b(died|death|passed|buried|laid to rest)\b/.test(summaryLower);
       const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
       const hasCensus = /\bcensus\b/.test(summaryLower);
+      const hasMilitary = /\b(draft|served|military|army|navy|air force|marine)\b/.test(summaryLower);
       const filtered = extras.filter((para) => {
         const p = para.toLowerCase();
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
         if (hasDeath && /\bdied\b/.test(p)) return false;
         if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
         if (hasCensus && /\bcensus\b/.test(p)) return false;
+        if (hasMilitary && /\b(draft|served)\b/.test(p)) return false;
         return true;
       });
       if (filtered.length) paragraphs = [...paragraphs, ...filtered];
@@ -2237,21 +2239,22 @@ function generatedLifeStory(person) {
     }
   }
 
+  if (familyParts.length) paragraphs.push(familyParts.join(" "));
+
+  // Military facts get their own paragraph so they survive the summary-supplement
+  // filter even when the summary already covers children or census records. Draft
+  // registration cards and VA BIRLS records are independent historical facts that
+  // shouldn't be silently dropped because the family paragraph was suppressed.
+  //
   // Draft registration: WWII (1940-1947) and WWI (1917-1918) draft cards are
-  // common sources for male ancestors born roughly 1877-1924. When one is
-  // attached, add a brief factual sentence so the historical event appears in
-  // the narrative, not only in the sources panel. The source label range
-  // (e.g. "1940-1947") blocks year extraction, so no year is claimed.
+  // common sources for male ancestors born roughly 1877-1924. The source label
+  // range (e.g. "1940-1947") blocks year extraction, so no year is claimed.
   const draftWars = new Set();
   for (const src of profileSources(person)) {
     const lbl = String(src.label || src.title || "");
     if (/world war ii|ww2\b|wwii\b/i.test(lbl) && /draft/i.test(lbl)) draftWars.add("II");
     else if (/world war i(?!i)|ww1\b|wwi(?!i)/i.test(lbl) && /draft/i.test(lbl)) draftWars.add("I");
   }
-  for (const war of ["I", "II"]) {
-    if (draftWars.has(war)) familyParts.push(`${given} registered for the World War ${war} draft.`);
-  }
-
   // VA BIRLS Death File is maintained by the Department of Veterans Affairs and
   // specifically covers people who served in the U.S. military — stronger than a
   // draft card (which only proves registration). Also surface when the person
@@ -2262,6 +2265,10 @@ function generatedLifeStory(person) {
     /veterans affairs|birls/i.test(String(src.label || src.title || ""))
   );
   const hasVeteranTag = (person.tags || []).some((tag) => /^veteran$/i.test(tag));
+  const militaryParts = [];
+  for (const war of ["I", "II"]) {
+    if (draftWars.has(war)) militaryParts.push(`${given} registered for the World War ${war} draft.`);
+  }
   if (hasBirls || hasVeteranTag) {
     const allSourceText = profileSources(person)
       .map((src) => String(src.label || src.title || "")).join(" ");
@@ -2270,12 +2277,11 @@ function generatedLifeStory(person) {
       : /\bUSN\b|U\.S\.?\s*Navy/i.test(allSourceText) ? "Navy"
       : /\bU\.?S\.?\s*Army\b/i.test(allSourceText) ? "Army"
       : null;
-    familyParts.push(branch
+    militaryParts.push(branch
       ? `${given} served in the U.S. ${branch}.`
       : `${given} served in the U.S. military.`);
   }
-
-  if (familyParts.length) paragraphs.push(familyParts.join(" "));
+  if (militaryParts.length) paragraphs.push(militaryParts.join(" "));
 
   // Para 4: death — include who the person left behind so the story closes
   // with the same family context the life timeline shows for the death event.
