@@ -2745,6 +2745,15 @@ function evidenceStatusLabel(status) {
   }[status] || status;
 }
 
+// "User-provided Discord note, 2026-07-20: actual content" → "actual content"
+// The "Note" quality badge already signals the provenance; the prefix is noise
+// in the panel. Leaves the raw label untouched in the data and search index.
+function stripUserProvidedPrefix(label) {
+  if (!label) return label;
+  const m = label.match(/^user-provided\s+[^,]+,\s*\d{4}-\d{2}-\d{2}\s*:\s*(.+)/i);
+  return m ? m[1] : label;
+}
+
 function cleanSourceLabel(label, repository) {
   if (!label || !repository) return label || "";
   // Also try the repository base name (domain without TLD) so "Ancestry source:"
@@ -2784,7 +2793,8 @@ function renderSourceItem(source, eventYear = null, birthYear = null) {
   heading.append(qualityBadge);
   const title = document.createElement("span");
   title.className = "source-title";
-  title.textContent = cleanSourceLabel(source.label || source.title, repository) || source.url;
+  const rawLabel = source.label || source.title;
+  title.textContent = cleanSourceLabel(stripUserProvidedPrefix(rawLabel), repository) || stripUserProvidedPrefix(rawLabel) || source.url;
   heading.append(title);
   item.append(heading);
 
@@ -5531,6 +5541,7 @@ export const __test = {
   humanizeDate,
   sourceRepositoryName,
   cleanSourceLabel,
+  stripUserProvidedPrefix,
   ancestorLaneDirection,
   branchSideAssignments,
   branchSide,
