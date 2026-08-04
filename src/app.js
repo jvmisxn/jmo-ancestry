@@ -536,6 +536,7 @@ function personSearchIndex() {
         person.death?.date,
         formatYears(person),
         person.notes,
+        person.occupation,
         storyText(person),
         ...(person.aliases || []),
         ...(person.tags || []),
@@ -754,6 +755,7 @@ function renderDetails() {
     fact("Born", formatEvent(person.birth)),
     fact("Died", formatEvent(person.death)),
     fact("Buried", formatEvent(person.burial)),
+    fact("Occupation", person.occupation),
     fact("Known as", person.aliases?.join(", ")),
     tagListFact(person),
   );
@@ -1560,7 +1562,8 @@ function renderLifeStory(person) {
       const hasChildren = /\b(child|children|son|daughter)\b/.test(ownChildText);
       const hasCensus = /\bcensus\b/.test(summaryLower);
       const hasMilitary = /\b(draft|served|military|army|navy|air force|marine|veteran)\b/.test(summaryLower);
-      const hasCareer = /\b(worked|employed|career|occupation|work\s+(for|with|at|as))\b/.test(summaryLower);
+      const hasCareer = /\b(worked|employed|career|occupation|work\s+(for|with|at|as))\b/.test(summaryLower)
+        || !!(person.occupation && summaryLower.includes(person.occupation.toLowerCase()));
       const filtered = extras.filter((para) => {
         const p = para.toLowerCase();
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
@@ -2419,6 +2422,11 @@ function generatedLifeStory(person) {
       const content = m[1].trim();
       if (!careerPat.test(content)) continue;
       careerParts.push(content.endsWith(".") ? content : `${content}.`);
+    }
+    // Fall back to the structured occupation field when no note-based career facts
+    // were found — generates a minimal sentence so the detail isn't silently lost.
+    if (!careerParts.length && person.occupation) {
+      careerParts.push(`${given} worked as ${person.occupation}.`);
     }
   }
   if (careerParts.length) paragraphs.push(careerParts.join(" "));
