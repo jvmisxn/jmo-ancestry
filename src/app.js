@@ -1115,7 +1115,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       rank: 1,
       marriage: true,
       personId: spouseId,
-      label: `Married ${spouse.name}`,
+      label: `Married ${cardDisplayName(spouse.name)}`,
       detail: [
         age !== null ? `around age ${age}` : "",
         marriagePlace ? `in ${marriagePlace}` : "",
@@ -1137,7 +1137,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       year,
       rank: 1,
       personId: childId,
-      label: `${child.name} born`,
+      label: `${cardDisplayName(child.name)} born`,
       detail: [
         age !== null ? `around age ${age}` : "",
         otherParent ? `with ${givenName(otherParent.name)}` : "",
@@ -1165,7 +1165,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         year,
         rank: 1,
         personId: siblingId,
-        label: `${sibling.name} born`,
+        label: `${cardDisplayName(sibling.name)} born`,
         detail: [siblingRole, age !== null ? `around age ${age}` : ""].filter(Boolean).join(" · "),
       });
     }
@@ -1191,7 +1191,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         year,
         rank: 1,
         personId: siblingId,
-        label: `${sibling.name} died`,
+        label: `${cardDisplayName(sibling.name)} died`,
         detail: [
           siblingDeathRole,
           siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
@@ -1219,7 +1219,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         year,
         rank: 1,
         personId: relativeId,
-        label: `${relative.name} died`,
+        label: `${cardDisplayName(relative.name)} died`,
         detail: [
           role,
           relativeAgeAtDeath !== null ? `aged ${relativeAgeAtDeath}` : "",
