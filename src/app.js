@@ -751,10 +751,14 @@ function renderDetails() {
   renderRelationPath(person, root);
   renderProfilePhoto(person);
   renderLifeStory(person);
+  // Derive a burial place from source labels (Find a Grave, cemetery transcriptions)
+  // when no structured burial.place field is present — matches the same fallback
+  // the life story prose already uses so the facts panel stays consistent.
+  const derivedCemetery = !person.burial?.place ? extractCemeteryName(person) : null;
   els.detailFacts.replaceChildren(
     fact("Born", formatEvent(person.birth)),
     fact("Died", formatEvent(person.death)),
-    fact("Buried", formatEvent(person.burial)),
+    fact("Buried", formatEvent(person.burial) || derivedCemetery),
     fact("Occupation", person.occupation),
     fact("Known as", person.aliases?.join(", ")),
     tagListFact(person),
