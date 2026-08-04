@@ -1544,7 +1544,10 @@ function renderLifeStory(person) {
     if (extras.length) {
       const summaryLower = summary.toLowerCase();
       const hasMarriage = /\b(married|marriage|wed|spouse|husband|wife)\b/.test(summaryLower);
-      const hasDeath = /\b(died|death|passed|buried|laid to rest)\b/.test(summaryLower);
+      // "the death of [someone]" and "[name]'s death" are third-party deaths, not the
+      // subject's own — don't let them suppress the generated death/burial supplement.
+      const hasDeath = /\b(died|passed|buried|laid to rest)\b/.test(summaryLower) ||
+        (/\bdeath\b/.test(summaryLower) && !/the death of\b/.test(summaryLower) && !/'s death\b/.test(summaryLower));
       const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
       const hasCensus = /\bcensus\b/.test(summaryLower);
       const hasMilitary = /\b(draft|served|military|army|navy|air force|marine|veteran)\b/.test(summaryLower);
