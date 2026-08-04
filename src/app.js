@@ -839,7 +839,15 @@ function renderDetails() {
         : personListMeta(spouse);
       const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
       const marriageResolved = resolveMarriageYear(person, spouseId);
-      const marriageNote = marriageResolved ? `m. ${marriageResolved.estimated ? "~" : ""}${marriageResolved.year}` : "";
+      // Marriage place is only safe when it can't be falsely attributed to the wrong
+      // union: single spouse (unambiguous) or a source-derived year pins it to this
+      // specific marriage. An estimated year alone can't distinguish between records.
+      const marriagePlace = (relations.spouses.length === 1 || (marriageResolved && !marriageResolved.estimated))
+        ? resolveMarriagePlace(person, spouseId)
+        : null;
+      const marriageNote = marriageResolved
+        ? `m. ${marriageResolved.estimated ? "~" : ""}${marriageResolved.year}${marriagePlace ? `, ${marriagePlace}` : ""}`
+        : marriagePlace ? `m. ${marriagePlace}` : "";
       spouseNoteById.set(spouseId, [marriageNote, yearNote, deathNote, placeMeta, childNote].filter(Boolean).join(" · "));
     }
   }
