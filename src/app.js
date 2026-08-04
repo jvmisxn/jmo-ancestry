@@ -2258,13 +2258,15 @@ function generatedLifeStory(person) {
   // VA BIRLS Death File is maintained by the Department of Veterans Affairs and
   // specifically covers people who served in the U.S. military — stronger than a
   // draft card (which only proves registration). Also surface when the person
-  // carries an explicit "veteran" tag or source labels name a confirmed military
-  // service (e.g. a Find a Grave memorial noting a military marker). When a
-  // branch abbreviation is present, name it; otherwise fall back to "U.S. military".
+  // carries an explicit "veteran" tag or a "veteran flag" tag (Find a Grave
+  // cemetery flag confirming a military marker on the grave), or when source
+  // labels name a confirmed military service (e.g. a Find a Grave memorial
+  // noting a military marker). When a branch abbreviation is present, name it;
+  // otherwise fall back to "U.S. military".
   const hasBirls = profileSources(person).some((src) =>
     /veterans affairs|birls/i.test(String(src.label || src.title || ""))
   );
-  const hasVeteranTag = (person.tags || []).some((tag) => /^veteran$/i.test(tag));
+  const hasVeteranTag = (person.tags || []).some((tag) => /^veteran\b/i.test(tag));
   const militaryParts = [];
   for (const war of ["I", "II"]) {
     if (draftWars.has(war)) militaryParts.push(`${given} registered for the World War ${war} draft.`);
