@@ -1548,6 +1548,7 @@ function renderLifeStory(person) {
       const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
       const hasCensus = /\bcensus\b/.test(summaryLower);
       const hasMilitary = /\b(draft|served|military|army|navy|air force|marine|veteran)\b/.test(summaryLower);
+      const hasCareer = /\b(worked|employed|career|occupation|work\s+(for|with|at|as))\b/.test(summaryLower);
       const filtered = extras.filter((para) => {
         const p = para.toLowerCase();
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
@@ -1555,6 +1556,7 @@ function renderLifeStory(person) {
         if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
         if (hasCensus && /\bcensus\b/.test(p)) return false;
         if (hasMilitary && /\b(draft|served)\b/.test(p)) return false;
+        if (hasCareer && /\b(worked|employed|served as|had a career)\b/.test(p)) return false;
         return true;
       });
       if (filtered.length) paragraphs = [...paragraphs, ...filtered];
