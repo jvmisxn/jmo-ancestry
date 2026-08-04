@@ -1900,7 +1900,16 @@ function generatedLifeStory(person) {
   // personal nicknames. Also match single-quoted nicknames ('Narcie').
   const nameForNick = cleanName;
   const nicknameMatch = nameForNick.match(/"([^"]+)"/) || nameForNick.match(/\s'([^']+)'/);
-  const nicknameFull = nicknameMatch ? (nicknameMatch[1]) : null;
+  let nicknameFull = nicknameMatch ? (nicknameMatch[1]) : null;
+  // When the primary name has no quoted nickname, check aliases — some people
+  // store the familiar form only there (e.g. Danny Graves aliases include
+  // 'Danny "Gomer" Graves'). Stop at the first alias that carries one.
+  if (!nicknameFull) {
+    for (const alias of (person.aliases || [])) {
+      const aliasNick = alias.match(/"([^"]+)"/);
+      if (aliasNick) { nicknameFull = aliasNick[1]; break; }
+    }
+  }
   const nickname = nicknameFull && nicknameFull !== given ? nicknameFull : null;
   const birthNum = numericYear(person.birth?.date);
   const deathNum = numericYear(person.death?.date);
