@@ -619,6 +619,9 @@ function searchMatchReason(person, term) {
   if (alias) return { field: "Also known as", snippet: alias };
   const tag = (person.tags || []).find((entry) => entry.toLowerCase().includes(term));
   if (tag) return { field: "Tag", snippet: tag };
+  if (person.occupation && person.occupation.toLowerCase().includes(term)) {
+    return { field: "Occupation", snippet: person.occupation };
+  }
   const fields = [
     ["Birth", person.birth?.place],
     ["Death", person.death?.place],
@@ -2444,7 +2447,7 @@ function generatedLifeStory(person) {
   const careerParts = [];
   if (given && given !== "They") {
     const escapedGiven = given.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const careerPat = new RegExp(`^${escapedGiven}\\s+(worked|was a\\s|served as|employed|had a career)`, "i");
+    const careerPat = new RegExp(`^${escapedGiven}\\s+(worked|was an?\\s|served as|employed|had a career)`, "i");
     for (const src of profileSources(person)) {
       const lbl = src.label || src.title || "";
       const m = lbl.match(/^user-provided\s+[^,]+,\s*\d{4}-\d{2}-\d{2}\s*:\s*(.+)/i);
