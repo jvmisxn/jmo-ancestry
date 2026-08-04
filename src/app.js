@@ -1555,6 +1555,13 @@ function renderLifeStory(person) {
         if (hasDeath && /\bdied\b/.test(p)) return false;
         if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
         if (hasCensus && /\bcensus\b/.test(p)) return false;
+        // When the summary uses narrative prose ("by 1940", "by 1950") rather than
+        // explicitly saying "census", the year signals that event is already told —
+        // suppress the generated census sentence to avoid restating it differently.
+        if (!hasCensus && /\bappears in\b.*\bcensus\b/.test(p)) {
+          const ym = p.match(/\b(1[6-9]\d{2}|20[0-4]\d)\b/);
+          if (ym && summaryLower.includes(ym[1])) return false;
+        }
         if (hasMilitary && /\b(draft|served)\b/.test(p)) return false;
         if (hasCareer && /\b(worked|employed|served as|had a career)\b/.test(p)) return false;
         return true;
