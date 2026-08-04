@@ -801,9 +801,11 @@ function renderDetails() {
         parts.push(`d. ${childDeathYear}${relationAgeTag(child)}`);
       }
       // When the note already carries d. YEAR, personListMeta's "Died in X"
-      // would repeat the death signal. Use only the birth place instead.
+      // would repeat the death signal. Prefer the death place (where they
+      // settled) over the birth place, falling back to birth place when the
+      // death place is unknown — migration context is more useful than origin.
       const placeMeta = childDeathYear
-        ? trimPlaceAnnotations(child?.birth?.place || "")
+        ? (trimPlaceAnnotations(child?.death?.place || "") || trimPlaceAnnotations(child?.birth?.place || ""))
         : personListMeta(child);
       if (placeMeta) parts.push(placeMeta);
       map.set(childId, parts.join(" · "));
@@ -832,10 +834,11 @@ function renderDetails() {
       const spouseAgeTag = spouseAgeAtDeath === 0 ? " (infant)" : spouseAgeAtDeath !== null && spouseAgeAtDeath > 0 && spouseAgeAtDeath <= 110 ? ` (aged ${spouseAgeAtDeath})` : "";
       const deathNote = spouseDeathYearLabel ? `d. ${spouseDeathYearLabel}${spouseAgeTag}` : "";
       // When the note already carries d. YEAR, personListMeta's "Died in X"
-      // would repeat the death signal. Use only the birth place instead —
-      // mirrors the same guard applied to sibling and child notes.
+      // would repeat the death signal. Prefer the death place (where they
+      // settled) over the birth place, falling back to birth place when the
+      // death place is unknown — mirrors the guard on sibling and child notes.
       const placeMeta = deathNote
-        ? trimPlaceAnnotations(spouse?.birth?.place || "")
+        ? (trimPlaceAnnotations(spouse?.death?.place || "") || trimPlaceAnnotations(spouse?.birth?.place || ""))
         : personListMeta(spouse);
       const childNote = sharedCount > 0 ? `${sharedCount} ${sharedCount === 1 ? "child" : "children"} together` : "";
       const marriageResolved = resolveMarriageYear(person, spouseId);
@@ -870,9 +873,12 @@ function renderDetails() {
       const sibDeathYearLabel = yearLabel(sib?.death?.date);
       const deathNote = sibDeathYearLabel ? `d. ${sibDeathYearLabel}${relationAgeTag(sib)}` : "";
       // When the note already carries d. YEAR, personListMeta's "Died in X"
-      // would repeat the death signal. Use only the birth place instead.
+      // would repeat the death signal. Prefer the death place (where they
+      // settled) over the birth place, falling back to birth place when the
+      // death place is unknown — migration context beats origin for ancestors
+      // who moved far from where they were born.
       const placeMeta = deathNote
-        ? trimPlaceAnnotations(sib?.birth?.place || "")
+        ? (trimPlaceAnnotations(sib?.death?.place || "") || trimPlaceAnnotations(sib?.birth?.place || ""))
         : personListMeta(sib);
       const note = [orderLabel, yearNote, deathNote, placeMeta].filter(Boolean).join(" · ");
       if (note) map.set(sibId, note);
@@ -909,10 +915,11 @@ function renderDetails() {
       const parentDeathYearLabel = yearLabel(parent?.death?.date);
       if (parentDeathYearLabel) parts.push(`d. ${parentDeathYearLabel}${relationAgeTag(parent)}`);
       // When the note already carries d. YEAR, personListMeta's "Died in X"
-      // would repeat the death signal. Use only the birth place instead —
-      // mirrors the same guard applied to sibling, spouse, and child notes.
+      // would repeat the death signal. Prefer the death place (where they
+      // settled) over the birth place, falling back to birth place when the
+      // death place is unknown — mirrors the guard on sibling, spouse, and child notes.
       const parentPlaceMeta = parentDeathYearLabel
-        ? trimPlaceAnnotations(parent?.birth?.place || "")
+        ? (trimPlaceAnnotations(parent?.death?.place || "") || trimPlaceAnnotations(parent?.birth?.place || ""))
         : personListMeta(parent);
       if (parentPlaceMeta) parts.push(parentPlaceMeta);
       const note = parts.filter(Boolean).join(" · ");
