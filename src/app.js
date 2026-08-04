@@ -5530,6 +5530,10 @@ function humanizeDate(value) {
       return `${monthName} ${Number(day)}, ${year}`;
     }
   }
+  // Tilde-prefixed bare year ("~1830") is a data shorthand, not English prose.
+  // Convert to "about YEAR" so life story sentences read naturally.
+  const tildeMatch = raw.match(/^~\s*(\d{4})$/);
+  if (tildeMatch) return `about ${tildeMatch[1]}`;
   return raw;
 }
 
