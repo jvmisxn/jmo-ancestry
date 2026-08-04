@@ -29,7 +29,7 @@ globalThis.location = { hash: "" };
 globalThis.requestAnimationFrame = (fn) => fn;
 
 const { __test: app } = await import("../src/app.js");
-const { extractCensusLocation } = app;
+const { extractCensusLocation, expandCensusAbbreviations } = app;
 
 let failures = 0;
 function check(name, actual, expected) {
@@ -70,26 +70,40 @@ check(
   "Allen County, Kentucky",
 );
 
-// Abbreviated format (Allen Co KY)
+// Abbreviated format (Allen Co KY) — Co and state abbreviation both expanded
 check(
-  "abbreviated county from Allen Co KY label",
+  "abbreviated county from Allen Co KY label expands to Allen County, Kentucky",
   extractCensusLocation("1950 US Census, Allen Co KY, ED 2-1 sheet 22, dwelling 272 (NARA image, free)"),
-  "Allen Co KY",
+  "Allen County, Kentucky",
 );
 
-// NARA viewer format
+// NARA viewer format — state abbreviation expanded
 check(
-  "county from NARA viewer label",
+  "county from NARA viewer label expands state abbreviation",
   extractCensusLocation("NARA 1950 census viewer, Allen County KY ED 2-18 (browse to sheet 11)"),
-  "Allen County KY",
+  "Allen County, Kentucky",
 );
 
-// NARA search result format
+// NARA search result format — state abbreviation expanded
 check(
-  "county from NARA search result label",
+  "county from NARA search result label expands state abbreviation",
   extractCensusLocation("NARA 1950 census search result for Balous Edwards, Bradford County FL"),
-  "Bradford County FL",
+  "Bradford County, Florida",
 );
+
+// Parenthetical researcher annotation stripped from location
+check(
+  "parenthetical annotation stripped from location",
+  extractCensusLocation("1900 U.S. Census, Buthersville, Allen County, Kentucky (sourced from FG og:description)"),
+  "Buthersville, Allen County, Kentucky",
+);
+
+// expandCensusAbbreviations helper — standalone tests
+check("Co expands to County", expandCensusAbbreviations("Allen Co KY"), "Allen County, Kentucky");
+check("KY expands to Kentucky", expandCensusAbbreviations("Allen County KY"), "Allen County, Kentucky");
+check("FL expands to Florida", expandCensusAbbreviations("Bradford County FL"), "Bradford County, Florida");
+check("already-expanded location unchanged", expandCensusAbbreviations("Allen County, Kentucky"), "Allen County, Kentucky");
+check("null passthrough", expandCensusAbbreviations(null), null);
 
 // Ancestry generic label — no location
 check(

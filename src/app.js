@@ -1706,6 +1706,33 @@ function appendStoryParagraph(paragraph, text, selfId, nameIndex, closeIds) {
 // Handles formats like "1950 U.S. census, Allen County, Kentucky, ED 2-18..."
 // and "NARA 1950 census viewer, Allen County KY ED 2-18...". Returns null when
 // no parseable location follows the "census" keyword.
+const US_STATE_NAMES = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi",
+  MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+  NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina",
+  ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+
+// Expand abbreviated county and state tokens so "Allen Co KY" reads as
+// "Allen County, Kentucky" in prose. "Co" (mixed-case) is a county shorthand;
+// a trailing two-letter uppercase state code becomes the full state name.
+function expandCensusAbbreviations(location) {
+  if (!location) return location;
+  let result = location.replace(/\bCo\b/g, "County");
+  result = result.replace(/\s+([A-Z]{2})\s*$/, (_, abbrev) => {
+    const state = US_STATE_NAMES[abbrev];
+    return state ? `, ${state}` : ` ${abbrev}`;
+  });
+  return result.trim().replace(/,\s*$/, "");
+}
+
 function extractCensusLocation(label) {
   if (!label) return null;
   const lower = label.toLowerCase();
@@ -1718,6 +1745,11 @@ function extractCensusLocation(label) {
   // Trim at record-detail keywords so "Allen County, Kentucky, ED 2-18, sheet 11" → "Allen County, Kentucky"
   const stopMatch = /\b(?:ED|sheet|page|dwelling|household|serial|lines?)\s+\d/i.exec(location);
   if (stopMatch) location = location.slice(0, stopMatch.index).trim().replace(/,\s*$/, "");
+  // Strip researcher parentheticals like "(sourced from FG og:description)" or
+  // "(NARA image, free)" that annotate how the source was found — they read as
+  // gibberish when embedded in life-story prose.
+  location = location.replace(/\s*\([^)]*\)/g, "").trim().replace(/,\s*$/, "");
+  location = expandCensusAbbreviations(location);
   return location.length >= 4 ? location : null;
 }
 
@@ -5499,6 +5531,7 @@ export const __test = {
   preservedPlace,
   importedPeopleSummary,
   extractCensusLocation,
+  expandCensusAbbreviations,
   profileObituaries,
   obituarySubject,
   obituarySubjectIsPerson,
