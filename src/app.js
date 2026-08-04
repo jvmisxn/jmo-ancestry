@@ -1548,7 +1548,12 @@ function renderLifeStory(person) {
       // subject's own — don't let them suppress the generated death/burial supplement.
       const hasDeath = /\b(died|passed|buried|laid to rest)\b/.test(summaryLower) ||
         (/\bdeath\b/.test(summaryLower) && !/the death of\b/.test(summaryLower) && !/'s death\b/.test(summaryLower));
-      const hasChildren = /\b(child|children|son|daughter)\b/.test(summaryLower);
+      // "son of" / "daughter of" are parentage references, not mentions of the
+      // subject's own children — strip them before testing so a summary that
+      // opens "she was the daughter of X" doesn't suppress the generated
+      // children paragraph for a person whose kids aren't covered there.
+      const ownChildText = summaryLower.replace(/\b(?:son|daughter)\s+of\b/g, "");
+      const hasChildren = /\b(child|children|son|daughter)\b/.test(ownChildText);
       const hasCensus = /\bcensus\b/.test(summaryLower);
       const hasMilitary = /\b(draft|served|military|army|navy|air force|marine|veteran)\b/.test(summaryLower);
       const hasCareer = /\b(worked|employed|career|occupation|work\s+(for|with|at|as))\b/.test(summaryLower);
