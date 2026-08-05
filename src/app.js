@@ -2141,7 +2141,8 @@ function generatedLifeStory(person) {
       const ageNote = marriageAge !== null && marriageAge >= 14 && marriageAge <= 80
         ? `, ${m.estimated ? "about " : ""}age ${marriageAge}`
         : "";
-      return { sid, name, m, ageNote };
+      const place = resolveMarriagePlace(person, sid);
+      return { sid, name, m, ageNote, place };
     }).filter(Boolean);
     // For exactly two spouses where both marriages have resolvable years, use
     // "first married … later married …" so the reader sees these were sequential
@@ -2154,8 +2155,8 @@ function generatedLifeStory(person) {
       && spouseEntries[0].m && spouseEntries[1].m
     ) {
       const [a, b] = [...spouseEntries].sort((x, y) => x.m.year - y.m.year);
-      const aYear = `${a.m.estimated ? "c. " : ""}${a.m.year}${a.ageNote}`;
-      const bYear = `${b.m.estimated ? "c. " : ""}${b.m.year}${b.ageNote}`;
+      const aYear = `${a.m.estimated ? "c. " : ""}${a.m.year}${a.place ? `, ${a.place}` : ""}${a.ageNote}`;
+      const bYear = `${b.m.estimated ? "c. " : ""}${b.m.year}${b.place ? `, ${b.place}` : ""}${b.ageNote}`;
       const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
       const isWidowed = firstSpouseDeath !== null
         && firstSpouseDeath >= a.m.year
@@ -2174,7 +2175,7 @@ function generatedLifeStory(person) {
         && spouseEntries[0].m && !spouseEntries[1].m
       ) {
         const [a, b] = spouseEntries;
-        const aYear = `${a.m.estimated ? "c. " : ""}${a.m.year}${a.ageNote}`;
+        const aYear = `${a.m.estimated ? "c. " : ""}${a.m.year}${a.place ? `, ${a.place}` : ""}${a.ageNote}`;
         const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
         const isWidowed = firstSpouseDeath !== null && firstSpouseDeath >= a.m.year;
         paragraphs.push(
@@ -2190,7 +2191,7 @@ function generatedLifeStory(person) {
         // When the first spouse's death is known and precedes the second
         // marriage, we can name the widowhood even without a first-marriage year.
         const [a, b] = spouseEntries;
-        const bYear = `${b.m.estimated ? "c. " : ""}${b.m.year}${b.ageNote}`;
+        const bYear = `${b.m.estimated ? "c. " : ""}${b.m.year}${b.place ? `, ${b.place}` : ""}${b.ageNote}`;
         const firstSpouseDeath = numericYear(personById(a.sid)?.death?.date);
         const isWidowed = firstSpouseDeath !== null && firstSpouseDeath <= b.m.year;
         paragraphs.push(
@@ -2211,8 +2212,8 @@ function generatedLifeStory(person) {
         });
         const countWords = ["", "once", "twice", "three times", "four times", "five times"];
         const countStr = countWords[sorted.length] || `${sorted.length} times`;
-        const parts = sorted.map(({ name, m, ageNote }) =>
-          m ? `${name} (${m.estimated ? "c. " : ""}${m.year}${ageNote})` : name,
+        const parts = sorted.map(({ name, m, ageNote, place }) =>
+          m ? `${name} (${m.estimated ? "c. " : ""}${m.year}${place ? `, ${place}` : ""}${ageNote})` : name,
         );
         const labeled = parts.map((part, i) => {
           if (i === 0) return `first to ${part}`;
@@ -2222,9 +2223,9 @@ function generatedLifeStory(person) {
         const joined = `${labeled.slice(0, -1).join(", ")}, and ${labeled[labeled.length - 1]}`;
         paragraphs.push(`${given} married ${countStr}: ${joined}.`);
       } else {
-        const parts = spouseEntries.map(({ name, m, ageNote }) => {
+        const parts = spouseEntries.map(({ name, m, ageNote, place }) => {
           if (!m) return name;
-          return `${name} (${m.estimated ? "c. " : ""}${m.year}${ageNote})`;
+          return `${name} (${m.estimated ? "c. " : ""}${m.year}${place ? `, ${place}` : ""}${ageNote})`;
         });
         paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
       }
