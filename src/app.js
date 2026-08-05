@@ -2473,23 +2473,33 @@ function generatedLifeStory(person) {
     /veterans affairs|birls/i.test(String(src.label || src.title || ""))
   );
   const hasVeteranTag = (person.tags || []).some((tag) => /^veteran\b/i.test(tag));
-  const militaryParts = [];
-  for (const war of ["I", "II"]) {
-    if (draftWars.has(war)) militaryParts.push(`${given} registered for the World War ${war} draft.`);
+  const wars = ["I", "II"].filter((w) => draftWars.has(w));
+  const allSourceText = profileSources(person)
+    .map((src) => String(src.label || src.title || "")).join(" ");
+  const branch = /\bUSAF\b|U\.S\.?\s*Air\s*Force/i.test(allSourceText) ? "Air Force"
+    : /\bUSMC\b|U\.S\.?\s*Marine|Marine\s*Corps/i.test(allSourceText) ? "Marine Corps"
+    : /\bUSN\b|U\.S\.?\s*Navy/i.test(allSourceText) ? "Navy"
+    : /\bU\.?S\.?\s*Army\b/i.test(allSourceText) ? "Army"
+    : null;
+  const hasService = hasBirls || hasVeteranTag;
+  const servicePart = hasService ? (branch ? `served in the U.S. ${branch}` : `served in the U.S. military`) : null;
+  // Build a single flowing sentence rather than two separate name-repeating
+  // sentences when draft registration and service are both known.
+  let militaryPara = null;
+  if (wars.length === 0 && servicePart) {
+    militaryPara = `${given} ${servicePart}.`;
+  } else if (wars.length > 0 && !servicePart) {
+    const draftPart = wars.length === 1
+      ? `registered for the World War ${wars[0]} draft`
+      : `registered for the World War ${wars[0]} and ${wars[1]} drafts`;
+    militaryPara = `${given} ${draftPart}.`;
+  } else if (wars.length > 0 && servicePart) {
+    const draftPart = wars.length === 1
+      ? `registered for the World War ${wars[0]} draft`
+      : `registered for the World War ${wars[0]} and ${wars[1]} drafts`;
+    militaryPara = `${given} ${draftPart} and ${servicePart}.`;
   }
-  if (hasBirls || hasVeteranTag) {
-    const allSourceText = profileSources(person)
-      .map((src) => String(src.label || src.title || "")).join(" ");
-    const branch = /\bUSAF\b|U\.S\.?\s*Air\s*Force/i.test(allSourceText) ? "Air Force"
-      : /\bUSMC\b|U\.S\.?\s*Marine|Marine\s*Corps/i.test(allSourceText) ? "Marine Corps"
-      : /\bUSN\b|U\.S\.?\s*Navy/i.test(allSourceText) ? "Navy"
-      : /\bU\.?S\.?\s*Army\b/i.test(allSourceText) ? "Army"
-      : null;
-    militaryParts.push(branch
-      ? `${given} served in the U.S. ${branch}.`
-      : `${given} served in the U.S. military.`);
-  }
-  if (militaryParts.length) paragraphs.push(militaryParts.join(" "));
+  if (militaryPara) paragraphs.push(militaryPara);
 
   // Career paragraph: surface family-provided occupation facts stored in
   // user-provided Discord note source labels. These notes follow the pattern

@@ -126,7 +126,7 @@ check(
   "John registered for the World War I draft.",
 );
 
-// 9. Both WWII draft and veteran tag → both sentences
+// 9. Both WWII draft and veteran tag → single combined sentence
 check(
   "WWII draft + veteran",
   militaryParaFor({
@@ -134,7 +134,34 @@ check(
     tags: ["veteran"],
     sources: [{ label: "World War II draft registration card, 1940-1947" }],
   }),
-  "John registered for the World War II draft. John served in the U.S. military.",
+  "John registered for the World War II draft and served in the U.S. military.",
+);
+
+// 10. Both WWI and WWII draft registrations (no service) → combined draft sentence
+check(
+  "WWI + WWII drafts no service",
+  militaryParaFor({
+    ...base,
+    sources: [
+      { label: "World War I draft registration card, 1917-1918" },
+      { label: "World War II draft registration card, 1940-1947" },
+    ],
+  }),
+  "John registered for the World War I and II drafts.",
+);
+
+// 11. Both drafts + veteran → single combined sentence
+check(
+  "WWI + WWII drafts + veteran",
+  militaryParaFor({
+    ...base,
+    tags: ["veteran"],
+    sources: [
+      { label: "World War I draft registration card, 1917-1918" },
+      { label: "World War II draft registration card, 1940-1947" },
+    ],
+  }),
+  "John registered for the World War I and II drafts and served in the U.S. military.",
 );
 
 if (failures === 0) {
