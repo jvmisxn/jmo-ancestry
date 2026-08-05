@@ -4,6 +4,8 @@ Static browser interface for viewing a private family-tree JSON file.
 
 This repo intentionally contains only sample data. Real family information belongs in the private `ancestry-family-data` repo.
 
+The public app is also an AI-agent research cockpit: imported JSON can include a seed packet, normalized places, map-ready events, reviewable claims, and long-running research tasks.
+
 ## Use
 
 1. Open the published webapp.
@@ -40,6 +42,17 @@ Person records can stay compact while still reading more like a life article:
 ```
 
 If `profile.summary` is missing, the app generates a short readable story from facts and relationships. Sources, photos, and obituaries should link out instead of embedding large documents or images in the JSON.
+
+## Agent Research Fields
+
+Private family JSON can add these top-level fields:
+
+- `project`: reusable seed story, privacy rules, research goal, and `agentInstructions`
+- `places`: normalized locations with `{ id, name, coordinates: { lat, lng } }`
+- `claims`: proposed or confirmed facts with `personId`, `text`, `status`, `confidence`, and `sources`
+- `researchTasks`: open questions for agents to work over time
+
+Person records can add `events` with `type`, `date`, `place`, `placeId`, `status`, and `sources`. The map uses `placeId` to draw confirmed or lead life paths without requiring private data to leave the browser.
 
 ## Local Preview
 

@@ -2,16 +2,48 @@
   "meta": {
     "title": "Family Tree",
     "defaultPersonId": "sample-root",
-    "updated": "2026-07-20",
+    "updated": "2026-08-05",
     "notes": "Sample data for the public webapp. Load a private family.json file to view real data."
   },
+  "project": {
+    "name": "Sample Family Research",
+    "slug": "sample-family-research",
+    "initialFamilyStoryDate": "2026-08-05",
+    "privacy": "Sample-only public dataset. Private family JSON stays in the browser.",
+    "goal": "Show how a family story becomes sourced claims, map events, and agent research tasks.",
+    "seedStory": "A reusable starter packet for a family that knows a few names, approximate places, and open questions.",
+    "agentInstructions": [
+      "Separate confirmed facts from leads, conflicts, and family lore.",
+      "Attach citations before promoting claims into profile facts.",
+      "Use normalized places for every mapped life event."
+    ]
+  },
+  "places": [
+    {
+      "id": "sample-hometown",
+      "name": "Sample Hometown",
+      "coordinates": {
+        "lat": 36.16,
+        "lng": -86.78
+      }
+    },
+    {
+      "id": "sample-county",
+      "name": "Sample County",
+      "coordinates": {
+        "lat": 37.78,
+        "lng": -85.77
+      }
+    }
+  ],
   "people": [
     {
       "id": "sample-root",
       "name": "Sample Person",
       "birth": {
         "date": "1980",
-        "place": ""
+        "place": "Sample Hometown",
+        "placeId": "sample-hometown"
       },
       "death": null,
       "parents": ["sample-father", "sample-mother"],
@@ -20,6 +52,15 @@
       "aliases": [],
       "tags": ["sample"],
       "notes": "Use the Load button to open a private family.json file from the data repo.",
+      "events": [
+        {
+          "type": "residence",
+          "date": "2000",
+          "place": "Sample County",
+          "placeId": "sample-county",
+          "status": "lead"
+        }
+      ],
       "sources": []
     },
     {
@@ -47,6 +88,25 @@
       "tags": ["sample"],
       "notes": "",
       "sources": []
+    }
+  ],
+  "claims": [
+    {
+      "id": "sample-claim",
+      "personId": "sample-root",
+      "text": "Sample Person may have lived in Sample County around 2000.",
+      "status": "lead",
+      "confidence": "low",
+      "sources": []
+    }
+  ],
+  "researchTasks": [
+    {
+      "id": "sample-task",
+      "title": "Replace sample records with private family JSON",
+      "status": "open",
+      "priority": "normal",
+      "nextStep": "Load a sourced family.json file, then review claims before promoting facts."
     }
   ]
 }

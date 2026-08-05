@@ -7,6 +7,7 @@ const state = {
   hasStoredData: false,
   selectedId: null,
   rootId: null,
+  activeBoard: "tree",
   collapseCollateral: true,
   expandedAncestors: new Set(),
   expandedSiblings: new Set(),
@@ -78,6 +79,10 @@ const HELP_TIPS = [
   },
 ];
 
+function queryAll(selector) {
+  return typeof document.querySelectorAll === "function" ? [...document.querySelectorAll(selector)] : [];
+}
+
 const els = {
   search: document.querySelector("#person-search"),
   list: document.querySelector("#person-list"),
@@ -91,6 +96,8 @@ const els = {
   zoomOut: document.querySelector("#zoom-out"),
   collapseBranches: document.querySelector("#collapse-branches"),
   exportJson: document.querySelector("#export-json"),
+  boardTabs: queryAll(".board-tab"),
+  boardPanels: queryAll(".board-panel"),
   title: document.querySelector("#tree-title"),
   treeSubtitle: document.querySelector("#tree-subtitle"),
   count: document.querySelector("#tree-count"),
@@ -99,6 +106,16 @@ const els = {
   selectedContext: document.querySelector("#selected-context"),
   viewport: document.querySelector("#tree-viewport"),
   svg: document.querySelector("#tree-svg"),
+  mapTitle: document.querySelector("#map-title"),
+  mapSummary: document.querySelector("#map-summary"),
+  mapSvg: document.querySelector("#map-svg"),
+  mapPathTitle: document.querySelector("#map-path-title"),
+  mapPathList: document.querySelector("#map-path-list"),
+  researchSummary: document.querySelector("#research-summary"),
+  seedPacket: document.querySelector("#seed-packet"),
+  agentInstructions: document.querySelector("#agent-instructions"),
+  claimsList: document.querySelector("#claims-list"),
+  taskList: document.querySelector("#task-list"),
   workspaceTitle: document.querySelector("#workspace-title"),
   workspaceMeta: document.querySelector("#workspace-meta"),
   peopleSummary: document.querySelector("#people-summary"),
@@ -205,6 +222,13 @@ async function init() {
     render();
   });
   els.exportJson.addEventListener("click", exportData);
+  els.boardTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      state.activeBoard = tab.dataset.board || "tree";
+      render();
+      if (state.activeBoard === "tree") fitTreeAfterLayout();
+    });
+  });
   els.centerPerson.addEventListener("click", () => {
     state.rootId = state.selectedId;
     resetExpandedAncestors();
@@ -458,11 +482,25 @@ function ensureDataCaches() {
 
 function render() {
   syncPanelState();
+  renderBoardState();
   renderWorkspaceSummary();
   renderPeople();
   renderDetails();
   renderTree();
+  renderMapBoard();
+  renderResearchBoard();
   renderDataStatus();
+}
+
+function renderBoardState() {
+  els.boardTabs.forEach((tab) => {
+    const active = tab.dataset.board === state.activeBoard;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-pressed", String(active));
+  });
+  els.boardPanels.forEach((panel) => {
+    panel.classList.toggle("active", panel.id === `${state.activeBoard}-board`);
+  });
 }
 
 function syncPanelState() {
@@ -485,6 +523,255 @@ function renderDataStatus(message, tone = "neutral") {
   els.dataStatus.className = `data-status ${tone}`;
   els.dataStatus.textContent = summary;
   els.clearData.hidden = !state.hasStoredData;
+}
+
+function places() {
+  return Array.isArray(state.data?.places) ? state.data.places : [];
+}
+
+function placeById(id) {
+  return places().find((place) => place.id === id);
+}
+
+function claims() {
+  return Array.isArray(state.data?.claims) ? state.data.claims : [];
+}
+
+function researchTasks() {
+  return Array.isArray(state.data?.researchTasks) ? state.data.researchTasks : [];
+}
+
+function projectMeta() {
+  return state.data?.project || {};
+}
+
+function personLifeEvents(person) {
+  const events = [...(person.events || [])];
+  if (person.birth) events.push({ type: "birth", date: person.birth.date, place: person.birth.place, placeId: person.birth.placeId, status: "confirmed" });
+  if (person.death) events.push({ type: "death", date: person.death.date, place: person.death.place, placeId: person.death.placeId, status: "confirmed" });
+  if (person.burial) events.push({ type: "burial", date: person.burial.date || person.death?.date, place: person.burial.place, placeId: person.burial.placeId, status: "confirmed" });
+  return events
+    .filter((event) => event.date || event.place || event.placeId)
+    .sort((a, b) => eventSortKey(a).localeCompare(eventSortKey(b)));
+}
+
+function mappedEventsForPerson(person) {
+  return personLifeEvents(person).filter((event) => event.placeId && placeById(event.placeId)?.coordinates);
+}
+
+function allMappedEvents() {
+  return people().flatMap((person) => mappedEventsForPerson(person).map((event) => ({ ...event, person })));
+}
+
+function renderMapBoard() {
+  const selected = personById(state.selectedId);
+  const mapped = allMappedEvents();
+  const selectedEvents = selected ? mappedEventsForPerson(selected) : [];
+  const placeCount = new Set(mapped.map((event) => event.placeId)).size;
+  els.mapTitle.textContent = selected ? `${selected.name}'s places` : "Places and paths";
+  els.mapSummary.textContent = `${placeCount} mapped places · ${mapped.length} events`;
+  els.mapPathTitle.textContent = selected ? `${selected.name} path` : "Selected path";
+  renderMapSvg(mapped, selectedEvents);
+  els.mapPathList.replaceChildren(
+    ...selectedEvents.length
+      ? selectedEvents.map((event) => mapTimelineItem(event))
+      : [emptyState("No mapped events yet.", "Add placeId values that match top-level places with coordinates.")],
+  );
+}
+
+function renderMapSvg(mapped, selectedEvents) {
+  const width = 960;
+  const height = 580;
+  const bounds = geoBounds(mapped);
+  els.mapSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  els.mapSvg.replaceChildren(svgEl("rect", { class: "map-background", x: 0, y: 0, width, height, rx: 8 }));
+
+  const selectedPoints = selectedEvents
+    .map((event) => ({ event, place: placeById(event.placeId) }))
+    .filter((item) => item.place?.coordinates)
+    .map((item) => projectGeo(item.place.coordinates, bounds, width, height));
+
+  for (let index = 1; index < selectedPoints.length; index += 1) {
+    const prev = selectedPoints[index - 1];
+    const next = selectedPoints[index];
+    els.mapSvg.append(svgEl("line", {
+      class: "map-path",
+      x1: prev.x,
+      y1: prev.y,
+      x2: next.x,
+      y2: next.y,
+    }));
+  }
+
+  for (const item of mapped) {
+    const place = placeById(item.placeId);
+    if (!place?.coordinates) continue;
+    const point = projectGeo(place.coordinates, bounds, width, height);
+    const active = item.person.id === state.selectedId;
+    const dot = svgEl("g", {
+      class: `map-dot ${active ? "active" : ""}`,
+      transform: `translate(${point.x} ${point.y})`,
+      tabindex: "0",
+      role: "button",
+      "aria-label": `${item.person.name}: ${eventTypeLabel(item)} at ${place.name}`,
+    });
+    dot.append(svgEl("circle", { r: active ? 8 : 5 }));
+    dot.append(svgText(placeShortName(place.name), 12, 4, "map-label"));
+    const title = svgEl("title", {});
+    title.textContent = `${item.person.name}: ${eventTypeLabel(item)} at ${place.name}`;
+    dot.append(title);
+    dot.addEventListener("click", () => selectPerson(item.person.id, false, true));
+    dot.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") selectPerson(item.person.id, false, true);
+    });
+    els.mapSvg.append(dot);
+  }
+}
+
+function renderResearchBoard() {
+  const project = projectMeta();
+  const openTasks = researchTasks().filter((task) => task.status !== "done").length;
+  const pendingClaims = claims().filter((claim) => claim.status !== "confirmed").length;
+  els.researchSummary.textContent = `${pendingClaims} claims to review · ${openTasks} open tasks`;
+
+  els.seedPacket.replaceChildren(
+    compactFact("Project", project.name || state.data?.meta?.title || "Family tree"),
+    compactFact("Started", project.initialFamilyStoryDate || state.data?.meta?.updated),
+    compactFact("Privacy", project.privacy || "Local browser data only"),
+    compactFact("Goal", project.goal || state.data?.meta?.notes),
+  );
+
+  const instructions = project.agentInstructions || defaultAgentInstructions();
+  els.agentInstructions.replaceChildren(...instructions.map((instruction) => {
+    const item = document.createElement("p");
+    item.className = "agent-item";
+    item.textContent = instruction;
+    return item;
+  }));
+
+  els.claimsList.replaceChildren(
+    ...claims().length
+      ? claims().map((claim) => claimCard(claim))
+      : [emptyState("No claims logged yet.", "Agents should add claims before promoted facts rewrite the profile.")],
+  );
+
+  els.taskList.replaceChildren(
+    ...researchTasks().length
+      ? researchTasks().map((task) => taskCard(task))
+      : [emptyState("No research tasks queued.", "Use tasks for long-running searches, unresolved conflicts, and next source targets.")],
+  );
+}
+
+function claimCard(claim) {
+  const card = document.createElement("article");
+  card.className = `claim-card claim-card--${claim.status || "lead"}`;
+  const person = claim.personId ? personById(claim.personId) : null;
+  card.innerHTML = `
+    <div>
+      <strong>${escapeHtml(claim.text || claim.title || "Untitled claim")}</strong>
+      <small>${escapeHtml(claim.status || "lead")} · ${escapeHtml(claim.confidence || "unknown confidence")}</small>
+    </div>
+    <button type="button">${escapeHtml(person?.name || claim.personId || "Review")}</button>
+  `;
+  card.querySelector("button").addEventListener("click", () => {
+    if (claim.personId) selectPerson(claim.personId, false, true);
+  });
+  return card;
+}
+
+function taskCard(task) {
+  const card = document.createElement("article");
+  card.className = `claim-card claim-card--${task.priority || "normal"}`;
+  card.innerHTML = `
+    <div>
+      <strong>${escapeHtml(task.title || "Untitled task")}</strong>
+      <small>${escapeHtml(task.status || "open")} · ${escapeHtml(task.priority || "normal")}</small>
+      <p>${escapeHtml(task.nextStep || "")}</p>
+    </div>
+  `;
+  return card;
+}
+
+function compactFact(label, value) {
+  const fragment = document.createDocumentFragment();
+  if (!value) return fragment;
+  const dt = document.createElement("dt");
+  const dd = document.createElement("dd");
+  dt.textContent = label;
+  dd.textContent = value;
+  fragment.append(dt, dd);
+  return fragment;
+}
+
+function mapTimelineItem(event) {
+  const place = event.placeId ? placeById(event.placeId)?.name : event.place;
+  const item = document.createElement("article");
+  item.className = "timeline-item";
+  item.innerHTML = `
+    <span class="timeline-year">${escapeHtml(event.date || "Unknown")}</span>
+    <div class="timeline-body">
+      <strong class="timeline-label">${escapeHtml(eventTypeLabel(event))}</strong>
+      <p class="timeline-detail">${escapeHtml(place || "Unknown place")}</p>
+    </div>
+  `;
+  return item;
+}
+
+function geoBounds(events) {
+  const coordinates = events.map((event) => placeById(event.placeId)?.coordinates).filter(Boolean);
+  if (!coordinates.length) return { minLat: 24, maxLat: 50, minLng: -125, maxLng: -66 };
+  const lats = coordinates.map((coord) => coord.lat);
+  const lngs = coordinates.map((coord) => coord.lng);
+  return {
+    minLat: Math.min(...lats),
+    maxLat: Math.max(...lats),
+    minLng: Math.min(...lngs),
+    maxLng: Math.max(...lngs),
+  };
+}
+
+function projectGeo(coord, bounds, width, height) {
+  const pad = 54;
+  const lngSpan = Math.max(bounds.maxLng - bounds.minLng, 1);
+  const latSpan = Math.max(bounds.maxLat - bounds.minLat, 1);
+  return {
+    x: pad + ((coord.lng - bounds.minLng) / lngSpan) * (width - pad * 2),
+    y: pad + ((bounds.maxLat - coord.lat) / latSpan) * (height - pad * 2),
+  };
+}
+
+function eventSortKey(event) {
+  return event.date || "9999";
+}
+
+function eventTypeLabel(event) {
+  const labels = {
+    birth: "Born",
+    residence: "Residence",
+    census: "Census",
+    marriage: "Marriage",
+    death: "Died",
+    burial: "Burial",
+    military: "Military",
+    immigration: "Immigration",
+  };
+  return labels[event.type] || titleCase(event.type || "Event");
+}
+
+function placeShortName(name) {
+  return String(name || "").split(",")[0].replace(/\bCounty\b/g, "Co.").trim();
+}
+
+function defaultAgentInstructions() {
+  return [
+    "Separate confirmed facts from leads, conflicts, and family lore.",
+    "Attach citations to every promoted claim.",
+    "Do not merge same-name records without corroborating dates, relationships, or geography.",
+  ];
+}
+
+function titleCase(value) {
+  return String(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function renderWorkspaceSummary() {

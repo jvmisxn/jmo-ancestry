@@ -70,6 +70,9 @@
                 </div>
               </div>
               <div class="view-actions" aria-label="View panels">
+                <button class="board-tab active" type="button" data-board="tree">Tree</button>
+                <button class="board-tab" type="button" data-board="map">Map</button>
+                <button class="board-tab" type="button" data-board="research">Research</button>
                 <button id="focus-direct" type="button" title="Show every connected relative around this family">Show full tree</button>
                 <button id="fit-tree" type="button" title="Fit tree to view">Fit view</button>
                 <button id="collapse-branches" type="button" title="Collapse every expanded branch back to the minimal tree" hidden>Collapse branches</button>
@@ -80,7 +83,7 @@
             </div>
           </div>
 
-          <div class="tree-stage">
+          <div id="tree-board" class="board-panel tree-stage active">
             <div class="tree-focus-bar">
               <article class="focus-card focus-card-root">
                 <span class="focus-label">Tree focus</span>
@@ -100,6 +103,53 @@
                 <button id="zoom-in" type="button" title="Zoom in (+)" aria-label="Zoom in">+</button>
                 <button id="zoom-out" type="button" title="Zoom out (−)" aria-label="Zoom out">−</button>
               </div>
+            </div>
+          </div>
+
+          <div id="map-board" class="board-panel map-board">
+            <div class="board-summary">
+              <div>
+                <p class="eyebrow">Mapped Evidence</p>
+                <h2 id="map-title">Places and paths</h2>
+              </div>
+              <p id="map-summary" class="section-meta"></p>
+            </div>
+            <div class="map-grid">
+              <div class="map-canvas">
+                <svg id="map-svg" role="img" aria-label="Map of family events"></svg>
+              </div>
+              <aside class="map-timeline" aria-label="Selected person path">
+                <h3 id="map-path-title">Selected path</h3>
+                <div id="map-path-list" class="timeline-list"></div>
+              </aside>
+            </div>
+          </div>
+
+          <div id="research-board" class="board-panel research-board">
+            <div class="board-summary">
+              <div>
+                <p class="eyebrow">Agent Workspace</p>
+                <h2>Claims, leads, and source review</h2>
+              </div>
+              <p id="research-summary" class="section-meta"></p>
+            </div>
+            <div class="research-grid">
+              <section class="research-panel">
+                <h3>Seed packet</h3>
+                <dl id="seed-packet" class="compact-facts"></dl>
+              </section>
+              <section class="research-panel">
+                <h3>Agent instructions</h3>
+                <div id="agent-instructions" class="agent-list"></div>
+              </section>
+              <section class="research-panel research-panel-wide">
+                <h3>Claims review</h3>
+                <div id="claims-list" class="claim-list"></div>
+              </section>
+              <section class="research-panel research-panel-wide">
+                <h3>Research tasks</h3>
+                <div id="task-list" class="claim-list"></div>
+              </section>
             </div>
           </div>
         </div>
