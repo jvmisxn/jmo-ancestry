@@ -783,10 +783,21 @@ function renderDetails() {
   if (relations.children.length) {
     const map = new Map();
     const total = relations.children.length;
+    // Track the ordinal position among dated children only. Undated children
+    // sort to the end of the list (birth year unknown → MAX_SAFE_INTEGER), so
+    // assigning them a positional ordinal like "4th child" would imply a birth
+    // order we don't actually know. Use "Child" for those instead.
+    let datedChildOrdinal = 0;
     for (let i = 0; i < total; i++) {
       const childId = relations.children[i];
       const child = personById(childId);
-      const orderLabel = total === 1 ? "Only child" : `${ordinal(i + 1)} child`;
+      const hasBirthYear = numericYear(child?.birth?.date) !== null;
+      if (hasBirthYear) datedChildOrdinal++;
+      const orderLabel = total === 1
+        ? "Only child"
+        : hasBirthYear
+          ? `${ordinal(datedChildOrdinal)} child`
+          : "Child";
       const parts = [orderLabel];
       if (spouseSet.size > 1) {
         const otherParentId = (child?.parents || []).find(
