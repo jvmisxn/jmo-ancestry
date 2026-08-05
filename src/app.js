@@ -19,6 +19,7 @@ const state = {
   profileCollapsed: false,
   sourcesExpanded: false,
   notesExpanded: false,
+  evidenceExpanded: false,
   peopleById: new Map(),
   relationshipIndex: null,
   searchIndex: null,
@@ -3284,8 +3285,14 @@ function renderEvidenceCoverage(person) {
     ? `${summary.sourced} covered · ${reviewCount} to review`
     : `${summary.sourced} covered`;
 
+  // When there are items to review, show the full grid so the researcher sees
+  // what needs attention immediately. When everything is sourced or N/A, the
+  // grid collapses to just the summary line — less noise for well-documented
+  // profiles — with a toggle to inspect the full breakdown on demand.
+  const showGrid = reviewCount > 0 || state.evidenceExpanded;
   const list = document.createElement("div");
   list.className = "evidence-grid";
+  list.hidden = !showGrid;
   for (const item of items) {
     const row = document.createElement("div");
     row.className = `evidence-item evidence-${item.status}`;
@@ -3300,7 +3307,20 @@ function renderEvidenceCoverage(person) {
     list.append(row);
   }
 
-  els.detailEvidence.replaceChildren(label, summaryLine, list);
+  const parts = [label, summaryLine, list];
+  if (reviewCount === 0) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "evidence-toggle";
+    toggle.textContent = state.evidenceExpanded ? "Hide detail" : "Show detail";
+    toggle.addEventListener("click", () => {
+      state.evidenceExpanded = !state.evidenceExpanded;
+      renderEvidenceCoverage(person);
+    });
+    parts.push(toggle);
+  }
+
+  els.detailEvidence.replaceChildren(...parts);
 }
 
 function evidenceStatusLabel(status) {
@@ -4856,6 +4876,7 @@ function selectPerson(id, reroot = true, openProfile = true) {
   syncHash(true);
   state.sourcesExpanded = false;
   state.notesExpanded = false;
+  state.evidenceExpanded = false;
   els.detailsShell.scrollTop = 0;
   if (openProfile) {
     state.profileCollapsed = false;

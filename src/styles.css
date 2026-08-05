@@ -747,6 +747,25 @@ dd,
   color: #8c3126;
 }
 
+.evidence-toggle {
+  align-self: start;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.76rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 120ms ease;
+}
+
+.evidence-toggle:hover,
+.evidence-toggle:focus-visible {
+  text-decoration-color: currentColor;
+}
+
 .empty-state {
   padding: 15px 14px;
   border: 1px dashed rgba(67, 99, 124, 0.28);
