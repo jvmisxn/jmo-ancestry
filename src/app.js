@@ -2128,7 +2128,7 @@ function generatedLifeStory(person) {
       : "";
     const marriagePlace = resolveMarriagePlace(person, spouseIds[0]);
     const placeStr = marriagePlace ? `, in ${marriagePlace}` : "";
-    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${placeStr}${ageStr}.`);
+    if (spouseNames[0]) paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${placeStr}${ageStr}.`);
   } else if (spouseIds.length > 1) {
     const spouseEntries = spouseIds.map((sid) => {
       const name = cardDisplayName(personById(sid)?.name);
@@ -2518,14 +2518,16 @@ function generatedLifeStory(person) {
     const survivingChildren = deathYear !== null
       ? childIds.filter((cid) => {
           const child = personById(cid);
-          const childDeath = numericYear(child?.death?.date);
+          if (!child?.name) return false;
+          const childDeath = numericYear(child.death?.date);
           return childDeath === null || childDeath > deathYear;
         })
       : [];
     const survivingSpouses = deathYear !== null
       ? spouseIds.filter((sid) => {
           const spouse = personById(sid);
-          const spouseDeath = numericYear(spouse?.death?.date);
+          if (!spouse?.name) return false;
+          const spouseDeath = numericYear(spouse.death?.date);
           return spouseDeath === null || spouseDeath > deathYear;
         })
       : [];
@@ -2554,7 +2556,8 @@ function generatedLifeStory(person) {
     const survivingParents = deathYear !== null
       ? parentIds.filter((pid) => {
           const parent = personById(pid);
-          const parentDeath = numericYear(parent?.death?.date);
+          if (!parent?.name) return false;
+          const parentDeath = numericYear(parent.death?.date);
           return parentDeath === null || parentDeath > deathYear;
         })
       : [];

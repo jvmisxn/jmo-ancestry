@@ -171,6 +171,27 @@ check(
   "John first married Jane Doe (1905, age 25), and later married Mary Brown (1920, age 40).",
 );
 
+// Dangling spouse reference — spouses[] contains an id not present in people[].
+// The marriage paragraph should be silently omitted rather than "John married undefined.".
+check(
+  "single dangling spouse reference — no marriage paragraph",
+  storyFor({
+    people: [
+      {
+        id: "john",
+        name: "John Smith",
+        birth: { date: "1880" },
+        death: { date: "1950" },
+        spouses: ["ghost"],
+        parents: [],
+        children: [],
+        sources: [],
+      },
+    ],
+  }).some((p) => p.includes("undefined") || p.includes("They")),
+  false,
+);
+
 if (failures === 0) {
   console.log("story-marriage-year: all checks passed");
 } else {

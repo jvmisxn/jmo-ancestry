@@ -211,6 +211,30 @@ check(
   "Bob died in Ohio, about age 30.",
 );
 
+// 13. Dangling spouse reference (id in spouses[] but no matching people[] record).
+//     Must not produce "spouse They" in survived-by or "married undefined." in the story.
+check(
+  "dangling spouse ref — no 'They' in survived-by",
+  deathParaFor({
+    people: [
+      {
+        ...parent,
+        children: [],
+        spouses: ["ghost"],
+      },
+    ],
+  }),
+  "Alice died in Ohio, about age 70.",
+);
+check(
+  "dangling spouse ref — no 'undefined' in story",
+  (() => {
+    app.state.data = { people: [{ ...parent, children: [], spouses: ["ghost"] }] };
+    return app.generatedLifeStory(app.state.data.people[0]).some((p) => p.includes("undefined") || p.includes("They"));
+  })(),
+  false,
+);
+
 if (failures === 0) {
   console.log("All story-survived-by tests passed.");
 } else {
