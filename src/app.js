@@ -1602,6 +1602,14 @@ function renderLifeStory(person) {
       // subject's own — don't let them suppress the generated death/burial supplement.
       const hasDeath = /\b(died|passed|buried|laid to rest)\b/.test(summaryLower) ||
         (/\bdeath\b/.test(summaryLower) && !/the death of\b/.test(summaryLower) && !/'s death\b/.test(summaryLower));
+      // Some summaries express the death year only as a date-range span like
+      // "(1915-1987)" without writing "died". A supplement that adds only
+      // "Name died about age N" repeats info already visible in the header
+      // and the range. Suppress it when the paragraph adds nothing beyond
+      // the bare age estimate — survival and burial supplements still pass.
+      const personDeathYear = numericYear(person.death?.date);
+      const deathInRange = !hasDeath && personDeathYear !== null
+        && new RegExp(`[-–]${personDeathYear}\\)`).test(summary);
       // "son of" / "daughter of" are parentage references, not mentions of the
       // subject's own children — strip them before testing so a summary that
       // opens "she was the daughter of X" doesn't suppress the generated
@@ -1616,6 +1624,10 @@ function renderLifeStory(person) {
         const p = para.toLowerCase();
         if (hasMarriage && /\bmarried\b/.test(p)) return false;
         if (hasDeath && /\bdied\b/.test(p)) return false;
+        // When the death year is already in a date-range span but the supplement
+        // has no survival/burial detail that earns its keep, suppress the
+        // redundant "Name died about age N" sentence.
+        if (deathInRange && /\bdied\b/.test(p) && !p.includes("survived by") && !p.includes("predeceased") && !/\bis buried\b/.test(p)) return false;
         if (hasChildren && /\bhad\b.*\bchild/.test(p)) return false;
         if (hasCensus && /\bcensus\b/.test(p)) {
           // Broad suppression would hide census years the summary never covers.
