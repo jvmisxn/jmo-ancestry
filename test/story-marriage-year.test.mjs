@@ -131,7 +131,7 @@ check(
       { id: "kid2", name: "Tom Smith", birth: { date: "1920" }, parents: ["john", "mary"], children: [] },
     ],
   })[1],
-  "John first married Jane Doe (1905, age 25), and later married Mary Brown (~1919, ~age 39).",
+  "John first married Jane Doe (1905, age 25), and later married Mary Brown (c. 1919, about age 39).",
 );
 
 // 5. Two spouses listed in reverse order in data (second married first) — should
