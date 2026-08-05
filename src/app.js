@@ -2598,14 +2598,15 @@ function generatedLifeStory(person) {
     // Year-only death WITH a place: use "in [place]" — the year is already in the
     // "(YYYY–YYYY)" header. Year-only death WITHOUT a place: when age is available,
     // omit the redundant year and lead with "aged N" instead; when there is no age
-    // either, keep the year as the only temporal anchor in the sentence.
+    // either, keep the year as the only temporal anchor in the sentence, prefixed
+    // with "in" so "died in 1967" reads correctly rather than bare "died 1967".
     const deathIsYearOnly = /^\d{4}$/.test(person.death?.date || "");
     const deathHasPlace = !!(person.death?.place || "").trim();
     const cleanedDeathPlace = deathIsYearOnly && deathHasPlace ? trimPlaceAnnotations((person.death.place || "").trim()) : "";
     const deathProse = deathIsYearOnly && cleanedDeathPlace
       ? `in ${cleanedDeathPlace}`
       : deathIsYearOnly && !ageProse
-      ? death
+      ? `in ${death}`
       : deathIsYearOnly
       ? ""
       : death;
