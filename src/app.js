@@ -2553,6 +2553,14 @@ function generatedLifeStory(person) {
           return childDeath !== null && childDeath < deathYear;
         })
       : [];
+    const parentIds = [...(index.get(person.id)?.parents || [])];
+    const survivingParents = deathYear !== null
+      ? parentIds.filter((pid) => {
+          const parent = personById(pid);
+          const parentDeath = numericYear(parent?.death?.date);
+          return parentDeath === null || parentDeath > deathYear;
+        })
+      : [];
     const survivedBy = [];
     if (survivingChildren.length === 1) {
       survivedBy.push(`child ${givenName(personById(survivingChildren[0])?.name)}`);
@@ -2570,8 +2578,14 @@ function generatedLifeStory(person) {
     }
     if (survivingSpouses.length === 1) survivedBy.push(`spouse ${givenName(personById(survivingSpouses[0])?.name)}`);
     else if (survivingSpouses.length > 1) survivedBy.push(`${survivingSpouses.length} spouses`);
-    // Use ", and " between groups (children / spouse) so "children Bob and Carol, and spouse Bertie"
-    // reads as two distinct groups rather than "Bob and Carol and spouse Bertie" (one run-on list).
+    if (survivingParents.length === 1) {
+      survivedBy.push(`parent ${givenName(personById(survivingParents[0])?.name)}`);
+    } else if (survivingParents.length >= 2) {
+      const parentGivens = survivingParents.map((pid) => givenName(personById(pid)?.name)).filter(Boolean);
+      survivedBy.push(`parents ${formatNameList(parentGivens)}`);
+    }
+    // Use ", and " between groups (children / spouse / parents) so groups stay
+    // distinct rather than running together in one comma list.
     const survivedStr = survivedBy.length
       ? `, survived by ${survivedBy.length > 1 ? survivedBy.join(", and ") : survivedBy[0]}`
       : "";

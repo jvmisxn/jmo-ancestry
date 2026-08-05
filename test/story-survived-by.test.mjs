@@ -147,6 +147,56 @@ check(
   "Alice died in Ohio, about age 70, predeceased by child Bob.",
 );
 
+// 8. No children or spouse — survived by one parent
+check(
+  "survived by one parent",
+  deathParaFor({
+    people: [
+      { id: "son", name: "Bob Smith", birth: { date: "1940" }, death: { date: "1970", place: "Ohio" }, parents: ["alice"], spouses: [], children: [] },
+      { id: "alice", name: "Alice Smith", birth: { date: "1915" }, parents: [], spouses: [], children: ["son"] },
+    ],
+  }),
+  "Bob died in Ohio, about age 30, survived by parent Alice.",
+);
+
+// 9. No children or spouse — survived by two parents (both living)
+check(
+  "survived by two parents",
+  deathParaFor({
+    people: [
+      { id: "son", name: "Bob Smith", birth: { date: "1940" }, death: { date: "1970", place: "Ohio" }, parents: ["alice", "tom"], spouses: [], children: [] },
+      { id: "alice", name: "Alice Smith", birth: { date: "1915" }, parents: [], spouses: ["tom"], children: ["son"] },
+      { id: "tom", name: "Tom Smith", birth: { date: "1912" }, parents: [], spouses: ["alice"], children: ["son"] },
+    ],
+  }),
+  "Bob died in Ohio, about age 30, survived by parents Alice and Tom.",
+);
+
+// 10. Survived by children AND parents
+check(
+  "survived by child and parent",
+  deathParaFor({
+    people: [
+      { id: "bob", name: "Bob Smith", birth: { date: "1930" }, death: { date: "1965", place: "Ohio" }, parents: ["alice"], spouses: [], children: ["sue"] },
+      { id: "alice", name: "Alice Smith", birth: { date: "1905" }, parents: [], spouses: [], children: ["bob"] },
+      { id: "sue", name: "Sue Smith", birth: { date: "1955" }, parents: ["bob"], spouses: [], children: [] },
+    ],
+  }),
+  "Bob died in Ohio, about age 35, survived by child Sue, and parent Alice.",
+);
+
+// 11. Parent who predeceased — not shown in survived-by
+check(
+  "predeceased parent — not in survived-by",
+  deathParaFor({
+    people: [
+      { id: "son", name: "Bob Smith", birth: { date: "1940" }, death: { date: "1970", place: "Ohio" }, parents: ["alice"], spouses: [], children: [] },
+      { id: "alice", name: "Alice Smith", birth: { date: "1915" }, death: { date: "1965" }, parents: [], spouses: [], children: ["son"] },
+    ],
+  }),
+  "Bob died in Ohio, about age 30.",
+);
+
 if (failures === 0) {
   console.log("All story-survived-by tests passed.");
 } else {
