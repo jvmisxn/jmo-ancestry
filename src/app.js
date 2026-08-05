@@ -1265,6 +1265,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       const age = birthYear !== null ? year - birthYear : null;
       const relativeBirthYear = numericYear(relative?.birth?.date);
       const relativeAgeAtDeath = relativeBirthYear !== null ? year - relativeBirthYear : null;
+      const relativeDeathPlace = trimPlaceAnnotations(relative?.death?.place || "") || trimPlaceAnnotations(relative?.birth?.place || "");
       events.push({
         year,
         rank: 1,
@@ -1274,6 +1275,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
           role,
           relativeAgeAtDeath !== null ? `aged ${relativeAgeAtDeath}` : "",
           age !== null ? `at age ${age}` : "",
+          relativeDeathPlace,
         ].filter(Boolean).join(" · "),
       });
     }
