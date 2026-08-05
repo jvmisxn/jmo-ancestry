@@ -87,6 +87,7 @@ const els = {
   search: document.querySelector("#person-search"),
   list: document.querySelector("#person-list"),
   loadJson: document.querySelector("#load-json"),
+  templateJson: document.querySelector("#template-json"),
   clearData: document.querySelector("#clear-data"),
   importJson: document.querySelector("#import-json"),
   focusDirect: document.querySelector("#focus-direct"),
@@ -197,6 +198,7 @@ async function init() {
     }
   });
   els.loadJson.addEventListener("click", () => els.importJson.click());
+  els.templateJson.addEventListener("click", downloadAgentTemplate);
   els.importJson.addEventListener("change", importData);
   els.clearData.addEventListener("click", forgetStoredData);
   els.focusDirect.addEventListener("click", () => {
@@ -518,11 +520,12 @@ function syncPanelState() {
 function renderDataStatus(message, tone = "neutral") {
   const isSample = people().some((person) => (person.tags || []).includes("sample"));
   const summary = message || (isSample
-    ? "Sample data loaded. Load your private family.json to replace it with your private research set."
+    ? "Sample data loaded. Download the agent template to start a private family.json, then load it here after research updates."
     : `${people().length} people loaded${state.hasStoredData ? " from this browser's saved copy" : ""}. Nothing leaves this browser.`);
   els.dataStatus.className = `data-status ${tone}`;
   els.dataStatus.textContent = summary;
   els.clearData.hidden = !state.hasStoredData;
+  els.templateJson.hidden = !isSample;
 }
 
 function places() {
@@ -5073,6 +5076,24 @@ function exportData() {
   anchor.download = "family.json";
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+async function downloadAgentTemplate() {
+  try {
+    const response = await fetch("./data/family-template.json");
+    if (!response.ok) throw new Error("template file unavailable");
+    const template = await response.json();
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "family-template.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    renderDataStatus("Downloaded family-template.json. Give that file to your AI agents, then load their updated family.json here.", "success");
+  } catch (error) {
+    renderDataStatus(`Could not download the template: ${error.message}`, "error");
+  }
 }
 
 async function importData(event) {

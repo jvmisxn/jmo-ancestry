@@ -9,8 +9,9 @@ The public app is also an AI-agent research cockpit: imported JSON can include a
 ## Use
 
 1. Open the published webapp.
-2. Download `data/family.json` from the private data repo.
-3. Click `Load` and choose that JSON file.
+2. If starting fresh, click `Agent template` and give `family-template.json` to your AI agents.
+3. Agents edit that JSON into a working `family.json` over time.
+4. Click `Load data` and choose the updated JSON file.
 
 The app reads the file locally in your browser. It does not upload private data anywhere.
 
@@ -53,6 +54,8 @@ Private family JSON can add these top-level fields:
 - `researchTasks`: open questions for agents to work over time
 
 Person records can add `events` with `type`, `date`, `place`, `placeId`, `status`, and `sources`. The map uses `placeId` to draw confirmed or lead life paths without requiring private data to leave the browser.
+
+`data/family-template.json` is the starter contract for agents. It explains how to seed the known family story, how to research safely, and how to update the same file that the user later loads back into the app.
 
 ## Local Preview
 

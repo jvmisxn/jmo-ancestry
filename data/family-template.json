@@ -1,0 +1,114 @@
+{
+  "meta": {
+    "title": "My Family Research",
+    "defaultPersonId": "start-person",
+    "updated": "YYYY-MM-DD",
+    "notes": "Working family research file. Keep confirmed facts, leads, conflicts, and family stories separate."
+  },
+  "project": {
+    "name": "My Family Research",
+    "slug": "my-family-research",
+    "initialFamilyStoryDate": "YYYY-MM-DD",
+    "privacy": "Private family research. Do not publish living-person details without explicit permission.",
+    "goal": "Turn the known family story into a sourced family tree with reviewable evidence.",
+    "seedStory": "Replace this with what the family already knows: names, surnames, approximate dates, places, relationships, stories, photos/documents available, and biggest questions.",
+    "howToUseThisFile": [
+      "The user downloads this template and fills in as much as they know.",
+      "AI agents edit this same JSON over time. Keep it valid JSON.",
+      "The user loads the updated file in JMO Ancestry with the Load data button.",
+      "Agents should add claims and researchTasks before rewriting person facts.",
+      "Promote a claim into a person profile only after sources support it."
+    ],
+    "agentInstructions": [
+      "Preserve privacy. Do not add sensitive living-person details unless the user supplied them for private use.",
+      "Separate confirmed facts from leads, conflicts, and family lore.",
+      "Attach citations to every claim, event, relationship, and promoted fact.",
+      "Prefer direct records for parent-child links: birth records, census households, obituaries naming parents, probate, marriage records, or death certificates.",
+      "Do not merge same-name records without corroborating dates, relationships, geography, or source context.",
+      "Use normalized place records and reference them with placeId on birth, death, burial, and events.",
+      "When evidence conflicts, add a claim with status conflict and explain what blocks the merge.",
+      "Keep researchTasks current with the next concrete source or archive to search."
+    ],
+    "researchWorkflow": [
+      "1. Normalize known names, aliases, dates, places, and relationships into people.",
+      "2. Add places with coordinates for any known birth, residence, death, burial, census, immigration, military, or marriage events.",
+      "3. Create claims for all sourced facts and plausible leads.",
+      "4. Mark claim status as confirmed, needs-review, lead, or conflict.",
+      "5. Add researchTasks for open questions and unresolved links.",
+      "6. Update meta.updated whenever agents materially change the file.",
+      "7. Return the edited JSON file to the user so they can load it in the app."
+    ]
+  },
+  "places": [
+    {
+      "id": "example-town-state",
+      "name": "Example Town, State",
+      "coordinates": {
+        "lat": 0,
+        "lng": 0
+      },
+      "notes": "Replace with a real place. Coordinates power the map view."
+    }
+  ],
+  "people": [
+    {
+      "id": "start-person",
+      "name": "Starting Person",
+      "birth": {
+        "date": "",
+        "place": "",
+        "placeId": ""
+      },
+      "death": null,
+      "parents": [],
+      "spouses": [],
+      "children": [],
+      "aliases": [],
+      "tags": ["seed", "needs direct source"],
+      "notes": "Replace this person with the user or the earliest known family anchor.",
+      "events": [
+        {
+          "type": "residence",
+          "date": "",
+          "place": "",
+          "placeId": "",
+          "status": "lead",
+          "sources": []
+        }
+      ],
+      "sources": []
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-example-001",
+      "personId": "start-person",
+      "text": "Example claim: Starting Person was born in Example Town.",
+      "status": "lead",
+      "confidence": "low",
+      "sources": [
+        {
+          "label": "Family story from user interview, YYYY-MM-DD",
+          "url": ""
+        }
+      ],
+      "agentNotes": "Replace or remove this example after adding real claims."
+    }
+  ],
+  "researchTasks": [
+    {
+      "id": "task-example-001",
+      "title": "Collect the starting family story",
+      "status": "open",
+      "priority": "high",
+      "nextStep": "Ask for known full names, maiden names, dates, places, relationships, family stories, documents, photos, and research goals."
+    },
+    {
+      "id": "task-example-002",
+      "title": "Find direct sources for parent-child links",
+      "status": "open",
+      "priority": "high",
+      "nextStep": "Search census, birth, marriage, obituary, cemetery, probate, military, immigration, and local archive records before promoting relationships."
+    }
+  ]
+}
