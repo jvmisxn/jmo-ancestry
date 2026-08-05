@@ -1289,6 +1289,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
     });
     const survivingSpouses = [...(index.get(person.id)?.spouses || [])].filter((id) => {
       const spouse = personById(id);
+      if (!spouse?.name) return false;
       const spouseDeath = numericYear(spouse?.death?.date);
       return spouseDeath === null || spouseDeath > deathYear;
     });

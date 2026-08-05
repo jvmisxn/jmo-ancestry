@@ -107,6 +107,15 @@ app.state.data.people.push(bare);
 const bareEvents = app.lifeTimeline(bare);
 check("bare person has no child/record events", bareEvents.filter((e) => e.rank === 1 || e.record).length, 0);
 
+// Dangling spouse ref in timeline: an id in spouses[] that has no matching
+// person record must not produce "survived by spouse They" in the death detail.
+const dangling = { id: "dangling-test", name: "Rose Example", birth: { date: "1900" }, death: { date: "1970" }, parents: [], spouses: ["ghost-spouse"], children: [], sources: [] };
+app.state.data.people.push(dangling);
+app.state.relationshipIndex = null;
+const danglingEvents = app.lifeTimeline(dangling);
+const danglingDeath = danglingEvents.find((e) => e.label === "Died");
+check("dangling spouse — no 'They' in timeline death detail", (danglingDeath?.detail || "").includes("They"), false);
+
 if (failures) {
   console.error(`${failures} failure(s)`);
   process.exit(1);
