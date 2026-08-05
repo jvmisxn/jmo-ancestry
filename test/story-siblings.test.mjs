@@ -121,6 +121,20 @@ check(
   "Alice Adams (b. 1900) was the child of John Adams and Mary Adams, one of 5 children alongside Bob, Carol, and 2 others.",
 );
 
+// 6. Sibling name ends in "Jr." — no double period
+check(
+  "sibling name ending in Jr. — single terminal period",
+  originFor({
+    people: [
+      { id: "alice", name: "Alice Adams", birth: { date: "1900" }, parents: ["dad", "mom"], children: [], spouses: [] },
+      { id: "bob", name: "Robert Adams Jr.", birth: { date: "1902" }, parents: ["dad", "mom"], children: [], spouses: [] },
+      { ...dad, children: ["alice", "bob"] },
+      { ...mom, children: ["alice", "bob"] },
+    ],
+  }),
+  "Alice Adams (b. 1900) was the child of John Adams and Mary Adams, one of 2 children alongside Robert Adams Jr.",
+);
+
 if (failures === 0) {
   console.log("story-siblings: all checks passed");
 } else {

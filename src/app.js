@@ -2389,7 +2389,7 @@ function generatedLifeStory(person) {
       }
     }
     const parentageSubject = hasBirthInfo ? given : intro;
-    originParts.push(`${parentageSubject} was the child of ${formatNameList(parents)}${siblingStr}.`);
+    originParts.push(endSentence(`${parentageSubject} was the child of ${formatNameList(parents)}${siblingStr}`));
     // If a parent died while this person was still a child (under 18), name
     // the loss in the origin paragraph — early parental death often shaped the
     // rest of a person's life through guardianship, early work, or remarriage.
@@ -2431,7 +2431,7 @@ function generatedLifeStory(person) {
       : "";
     const marriagePlace = resolveMarriagePlace(person, spouseIds[0]);
     const placeStr = marriagePlace ? `, in ${marriagePlace}` : "";
-    if (spouseNames[0]) paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${placeStr}${ageStr}.`);
+    if (spouseNames[0]) paragraphs.push(endSentence(`${given} married ${spouseNames[0]}${yearStr}${placeStr}${ageStr}`));
   } else if (spouseIds.length > 1) {
     const spouseEntries = spouseIds.map((sid) => {
       const name = cardDisplayName(personById(sid)?.name);
@@ -2527,7 +2527,7 @@ function generatedLifeStory(person) {
           if (!m) return name;
           return `${name} (${m.estimated ? "c. " : ""}${m.year}${place ? `, ${place}` : ""}${ageNote})`;
         });
-        paragraphs.push(`${given} was married to ${formatNameList(parts)}.`);
+        paragraphs.push(endSentence(`${given} was married to ${formatNameList(parts)}`));
       }
     }
   }
@@ -2611,8 +2611,8 @@ function generatedLifeStory(person) {
         const countWord = numWord(childIds.length);
         const nameList = formatNameList(namesForIds(childIds));
         familyParts.push(childIds.length === 1
-          ? `${given} had one recorded child, ${nameList}${spanStr}.`
-          : `${given} had ${countWord} recorded children: ${nameList}${spanStr}.`);
+          ? endSentence(`${given} had one recorded child, ${nameList}${spanStr}`)
+          : endSentence(`${given} had ${countWord} recorded children: ${nameList}${spanStr}`));
       }
     }
   }
@@ -6029,6 +6029,12 @@ function formatNameList(names) {
   if (names.length <= 1) return names[0] || "";
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
   return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+// Append a sentence-ending period only when the string doesn't already end in
+// one — prevents "Jr.." when a name suffix carries its own terminal period.
+function endSentence(str) {
+  return str.endsWith(".") ? str : `${str}.`;
 }
 
 function givenName(name = "") {

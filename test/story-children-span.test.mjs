@@ -138,6 +138,18 @@ check(
   "Alice had 5 children, including Bob Smith, Carol Smith, and Dan Smith.",
 );
 
+// Child name ending in "Jr." — no double period at end of sentence
+check(
+  "one child name ending in Jr. — single terminal period",
+  childrenParaFor({
+    people: [
+      { ...parent, children: ["c1"] },
+      { id: "c1", name: "Bob Smith Jr.", parents: ["alice"], children: [], spouses: [] },
+    ],
+  }),
+  "Alice had one recorded child, Bob Smith Jr.",
+);
+
 if (failures === 0) {
   console.log("story-children-span: all checks passed");
 } else {

@@ -171,6 +171,32 @@ check(
   "John first married Jane Doe (1905, age 25), and later married Mary Brown (1920, age 40).",
 );
 
+// Spouse name ending in "Jr." — single-spouse path should not produce "married X Jr.."
+check(
+  "spouse name ending in Jr. — single terminal period",
+  storyFor({
+    people: [
+      {
+        id: "jane",
+        name: "Jane Smith",
+        birth: { date: "1900" },
+        spouses: ["bob"],
+        parents: [],
+        children: [],
+        sources: [],
+      },
+      {
+        id: "bob",
+        name: "Robert Smith Jr.",
+        spouses: ["jane"],
+        parents: [],
+        children: [],
+      },
+    ],
+  }).find((p) => p.includes("married")),
+  "Jane married Robert Smith Jr.",
+);
+
 // Dangling spouse reference — spouses[] contains an id not present in people[].
 // The marriage paragraph should be silently omitted rather than "John married undefined.".
 check(
