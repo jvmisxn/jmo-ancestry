@@ -1215,7 +1215,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         rank: 1,
         personId: siblingId,
         label: `${cardDisplayName(sibling.name)} born`,
-        detail: [siblingRole, age !== null ? `aged ${age}` : ""].filter(Boolean).join(" · "),
+        detail: [siblingRole, age !== null ? `aged ${age}` : "", trimPlaceAnnotations(sibling?.birth?.place || "")].filter(Boolean).join(" · "),
       });
     }
 
@@ -1245,6 +1245,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
           siblingDeathRole,
           siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
           age !== null ? `at age ${age}` : "",
+          trimPlaceAnnotations(sibling?.death?.place || "") || trimPlaceAnnotations(sibling?.birth?.place || ""),
         ].filter(Boolean).join(" · "),
       });
     }
