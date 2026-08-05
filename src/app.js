@@ -2131,7 +2131,7 @@ function generatedLifeStory(person) {
       : "";
     const marriagePlace = resolveMarriagePlace(person, spouseIds[0]);
     const placeStr = marriagePlace ? `, in ${marriagePlace}` : "";
-    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${ageStr}${placeStr}.`);
+    paragraphs.push(`${given} married ${spouseNames[0]}${yearStr}${placeStr}${ageStr}.`);
   } else if (spouseIds.length > 1) {
     const spouseEntries = spouseIds.map((sid) => {
       const name = cardDisplayName(personById(sid)?.name);
