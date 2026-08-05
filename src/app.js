@@ -744,7 +744,7 @@ function renderDetails() {
       metaPill(formatYears(person) || "Dates pending"),
       person.birth?.place ? placeSearchPill("Born", person.birth.place) : null,
       person.death?.place ? placeSearchPill("Died", person.death.place) : null,
-      age ? metaPill(age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
+      age ? metaPill(age.years === 0 ? "Died in infancy" : age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
       liveAge ? metaPill(liveAge) : null,
       sources.length ? evidencePill(sources, person) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
@@ -1243,7 +1243,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         label: `${cardDisplayName(sibling.name)} died`,
         detail: [
           siblingDeathRole,
-          siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
+          siblingAgeAtDeath === 0 ? "infant" : siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
           age !== null ? `at age ${age}` : "",
           trimPlaceAnnotations(sibling?.death?.place || "") || trimPlaceAnnotations(sibling?.birth?.place || ""),
         ].filter(Boolean).join(" · "),
@@ -1273,7 +1273,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         label: `${cardDisplayName(relative.name)} died`,
         detail: [
           role,
-          relativeAgeAtDeath !== null ? `aged ${relativeAgeAtDeath}` : "",
+          relativeAgeAtDeath === 0 ? "infant" : relativeAgeAtDeath !== null ? `aged ${relativeAgeAtDeath}` : "",
           age !== null ? `at age ${age}` : "",
           relativeDeathPlace,
         ].filter(Boolean).join(" · "),
@@ -1306,7 +1306,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
       label: "Died",
       detail: [
         formatEvent(person.death),
-        age ? (age.approx ? `about age ${age.years}` : `aged ${age.years}`) : "",
+        age ? (age.years === 0 ? "in infancy" : age.approx ? `about age ${age.years}` : `aged ${age.years}`) : "",
         survivedBy.length ? `survived by ${survivedBy.join(" and ")}` : "",
       ].filter(Boolean).join(" · "),
     });
