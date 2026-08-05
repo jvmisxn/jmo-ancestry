@@ -744,7 +744,7 @@ function renderDetails() {
       metaPill(formatYears(person) || "Dates pending"),
       person.birth?.place ? placeSearchPill("Born", person.birth.place) : null,
       person.death?.place ? placeSearchPill("Died", person.death.place) : null,
-      age ? metaPill(age.years === 0 ? "Died in infancy" : age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
+      age ? metaPill((age.years === 0 || (age.years === 1 && age.approx)) ? "Died in infancy" : age.approx ? `Died about age ${age.years}` : `Died aged ${age.years}`) : null,
       liveAge ? metaPill(liveAge) : null,
       sources.length ? evidencePill(sources, person) : null,
       relationTotal ? metaPill(`${relationTotal} relationship${relationTotal === 1 ? "" : "s"}`) : null,
@@ -841,8 +841,8 @@ function renderDetails() {
       const yearNote = spouseYearLabel ? `b. ${spouseYearLabel}` : "";
       const spouseDeathYearLabel = yearLabel(spouse?.death?.date);
       const spouseDeathNum = numericYear(spouse?.death?.date);
-      const spouseAgeAtDeath = spouseBirthNum !== null && spouseDeathNum !== null ? spouseDeathNum - spouseBirthNum : null;
-      const spouseAgeTag = spouseAgeAtDeath === 0 ? " (infant)" : spouseAgeAtDeath !== null && spouseAgeAtDeath > 0 && spouseAgeAtDeath <= 110 ? ` (aged ${spouseAgeAtDeath})` : "";
+      const spouseAgeLabel = spouse ? timelineRelativeAgeLabel(spouse) : "";
+      const spouseAgeTag = spouseAgeLabel ? ` (${spouseAgeLabel})` : "";
       const deathNote = spouseDeathYearLabel ? `d. ${spouseDeathYearLabel}${spouseAgeTag}` : "";
       // When the note already carries d. YEAR, personListMeta's "Died in X"
       // would repeat the death signal. Prefer the death place (where they
@@ -1231,7 +1231,6 @@ function lifeTimeline(person, index = relationshipIndex()) {
       const age = birthYear !== null ? year - birthYear : null;
       const half = isHalfSiblingPair(person.id, siblingId, index);
       const siblingBirthYear = numericYear(sibling?.birth?.date);
-      const siblingAgeAtDeath = siblingBirthYear !== null ? year - siblingBirthYear : null;
       const baseDeathLabel = half ? "half-sibling" : "sibling";
       const siblingDeathRole = (birthYear !== null && siblingBirthYear !== null)
         ? `${siblingBirthYear < birthYear ? "older" : "younger"} ${baseDeathLabel}`
@@ -1243,7 +1242,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         label: `${cardDisplayName(sibling.name)} died`,
         detail: [
           siblingDeathRole,
-          siblingAgeAtDeath === 0 ? "infant" : siblingAgeAtDeath !== null ? `aged ${siblingAgeAtDeath}` : "",
+          timelineRelativeAgeLabel(sibling),
           age !== null ? `at age ${age}` : "",
           trimPlaceAnnotations(sibling?.death?.place || "") || trimPlaceAnnotations(sibling?.birth?.place || ""),
         ].filter(Boolean).join(" · "),
@@ -1263,8 +1262,6 @@ function lifeTimeline(person, index = relationshipIndex()) {
       if (birthYear !== null && year < birthYear) continue;
       if (deathYear !== null && year > deathYear) continue;
       const age = birthYear !== null ? year - birthYear : null;
-      const relativeBirthYear = numericYear(relative?.birth?.date);
-      const relativeAgeAtDeath = relativeBirthYear !== null ? year - relativeBirthYear : null;
       const relativeDeathPlace = trimPlaceAnnotations(relative?.death?.place || "") || trimPlaceAnnotations(relative?.birth?.place || "");
       events.push({
         year,
@@ -1273,7 +1270,7 @@ function lifeTimeline(person, index = relationshipIndex()) {
         label: `${cardDisplayName(relative.name)} died`,
         detail: [
           role,
-          relativeAgeAtDeath === 0 ? "infant" : relativeAgeAtDeath !== null ? `aged ${relativeAgeAtDeath}` : "",
+          timelineRelativeAgeLabel(relative),
           age !== null ? `at age ${age}` : "",
           relativeDeathPlace,
         ].filter(Boolean).join(" · "),
@@ -2514,7 +2511,7 @@ function generatedLifeStory(person) {
     // Build age prose without a leading comma so it composes cleanly with
     // deathProse via a simple join, rather than always needing a preceding value.
     const ageProse = !age ? ""
-      : age.years === 0 ? (age.approx ? "likely in infancy" : "in infancy")
+      : (age.years === 0 || (age.years === 1 && age.approx)) ? (age.approx ? "likely in infancy" : "in infancy")
       : age.approx ? `about age ${age.years}`
       : `aged ${age.years}`;
     const deathYear = numericYear(person.death?.date);
@@ -5485,6 +5482,26 @@ function relationAgeTag(person) {
   if (age === null) return "";
   if (age.years === 0 || (age.years === 1 && age.approx)) return " (infant)";
   if (age.years > 0 && age.years <= 110) return ` (aged ${age.years})`;
+  return "";
+}
+
+// Age label for a relative's death as shown in someone else's timeline detail
+// ("infant", "aged 27", etc.). Tries ageAtDeath() first for month/day
+// precision; falls back to numericYear-based arithmetic for qualitative dates
+// like "abt 1905" that parseDateParts() cannot handle.
+function timelineRelativeAgeLabel(person) {
+  const age = ageAtDeath(person);
+  if (age !== null) {
+    if (age.years === 0 || (age.years === 1 && age.approx)) return "infant";
+    if (age.years > 0 && age.years <= 110) return `aged ${age.years}`;
+    return "";
+  }
+  const deathNum = numericYear(person?.death?.date);
+  const birthNum = numericYear(person?.birth?.date);
+  if (deathNum === null || birthNum === null) return "";
+  const approxAge = deathNum - birthNum;
+  if (approxAge <= 1) return "infant";
+  if (approxAge > 0 && approxAge <= 110) return `aged ${approxAge}`;
   return "";
 }
 
