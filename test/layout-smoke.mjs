@@ -146,6 +146,7 @@ for (const person of data.people) {
     for (const parentId of index.get(id)?.parents || []) {
       if (upSeen.has(parentId)) continue;
       upSeen.add(parentId);
+      if (!index.has(parentId)) continue; // dangling ref — not a people-array entry
       ancestors.push(parentId);
       upQueue.push(parentId);
     }
