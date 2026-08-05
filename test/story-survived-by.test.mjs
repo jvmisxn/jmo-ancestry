@@ -185,7 +185,21 @@ check(
   "Bob died in Ohio, about age 35, survived by child Sue, and parent Alice.",
 );
 
-// 11. Parent who predeceased — not shown in survived-by
+// 11. Survived by child, spouse, AND parent — three groups use Oxford comma, not ", and A, and B"
+check(
+  "survived by child, spouse, and parent — oxford comma",
+  deathParaFor({
+    people: [
+      { id: "bob", name: "Bob Smith", birth: { date: "1930" }, death: { date: "1960", place: "Ohio" }, parents: ["alice"], spouses: ["eve"], children: ["sue"] },
+      { id: "alice", name: "Alice Smith", birth: { date: "1905" }, parents: [], spouses: [], children: ["bob"] },
+      { id: "eve", name: "Eve Jones", birth: { date: "1932" }, spouses: ["bob"], parents: [], children: ["sue"] },
+      { id: "sue", name: "Sue Smith", birth: { date: "1955" }, parents: ["bob", "eve"], spouses: [], children: [] },
+    ],
+  }),
+  "Bob died in Ohio, about age 30, survived by child Sue, spouse Eve, and parent Alice.",
+);
+
+// 12. Parent who predeceased — not shown in survived-by
 check(
   "predeceased parent — not in survived-by",
   deathParaFor({

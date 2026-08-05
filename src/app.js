@@ -2584,11 +2584,16 @@ function generatedLifeStory(person) {
       const parentGivens = survivingParents.map((pid) => givenName(personById(pid)?.name)).filter(Boolean);
       survivedBy.push(`parents ${formatNameList(parentGivens)}`);
     }
-    // Use ", and " between groups (children / spouse / parents) so groups stay
-    // distinct rather than running together in one comma list.
-    const survivedStr = survivedBy.length
-      ? `, survived by ${survivedBy.length > 1 ? survivedBy.join(", and ") : survivedBy[0]}`
-      : "";
+    // Use ", and " between two groups (children / spouse / parents) so they
+    // stay distinct. For three or more groups use Oxford comma so "and" appears
+    // only once: "child Sue, spouse Eve, and parent Alice".
+    const survivedStr = survivedBy.length === 0
+      ? ""
+      : survivedBy.length === 1
+        ? `, survived by ${survivedBy[0]}`
+        : survivedBy.length === 2
+          ? `, survived by ${survivedBy[0]}, and ${survivedBy[1]}`
+          : `, survived by ${survivedBy.slice(0, -1).join(", ")}, and ${survivedBy[survivedBy.length - 1]}`;
     const predeceasedParts = [];
     const predeceasedSpouseNames = predeceasedSpouses.map((sid) => givenName(personById(sid)?.name)).filter(Boolean);
     if (predeceasedSpouseNames.length) predeceasedParts.push(formatNameList(predeceasedSpouseNames));
